@@ -1,4 +1,20 @@
-import express from 'express'; // Importa el módulo express
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+import fetch from 'node-fetch';
+global.fetch = fetch;
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+
+// Configura tus credenciales de Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
 const app = express();
 const PORT = 3000;
 
@@ -9,6 +25,45 @@ app.get('/', (req, res) => {
     res.json('Bienvenido a la API de Juntify');
 });
 
+app.post('/registro', async (req, res) => {
+    const { email, password, username, nombre, apellido } = req.body;
+
+  // Paso 1: Crear el usuario en Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (authError) {
+    return res.status(400).json({ error: authError.message });
+  }
+
+  const userId = authData.user.id;
+
+  // Paso 2: Insertar los datos adicionales en la tabla profiles
+  const { error: profileError } = await supabase.from('profiles').insert([
+    {
+      id: userId,
+      username,
+      nombre,
+      apellido
+    }
+  ]);
+
+  if (profileError) {
+    return res.status(400).json({ error: profileError.message });
+  }
+
+  res.json({
+    message: 'Usuario registrado exitosamente. Revisa tu correo para confirmar.',
+    user: authData.user
+  });
+});
+app.get('/pruebaPlanes', async (req, res) => {
+    const { data, error } = await supabase.from('Planes').select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
