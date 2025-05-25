@@ -8,6 +8,7 @@ dotenv.config();
 
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { sendPushNotification } from './sendPushNotification.js'; // o la ruta que corresponda
 
 // Configura tus credenciales de Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -19,6 +20,10 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json()); // para poder leer JSON en POST y PUT
+
+
+
+
 
 
 app.get('/', (req, res) => {
@@ -33,15 +38,19 @@ app.post('/registro', async (req, res) => {
     email,
     password
   });
-
+  
   if (authError) {
-    return res.status(400).json({ error: authError.message });
+    console.error('Error al crear el usuario:', authError);
+    return res.status(400).json({ error: authError.message ?? authError ?? 'Error desconocido en Auth' });
   }
+
+
+
 
   const userId = authData.user.id;
 
   // Paso 2: Insertar los datos adicionales en la tabla profiles
-  const { error: profileError } = await supabase.from('profiles').insert([
+  const { error: profileError } = await supabase.from('perfiles').insert([
     {
       id: userId,
       username,
@@ -49,10 +58,12 @@ app.post('/registro', async (req, res) => {
       apellido
     }
   ]);
-
+  console.log('profileError:', profileError);
+  console.log(profileError)
   if (profileError) {
-    return res.status(400).json({ error: profileError.message || JSON.stringify(profileError) || 'Error desconocido en profiles' });
-  }
+  console.error('Error al insertar en profiles:', profileError);
+  return res.status(400).json({ error: profileError.message ?? profileError ?? 'Error desconocido en profiles' });
+}
 
   res.json({
     message: 'Usuario registrado exitosamente. Revisa tu correo para confirmar.',
@@ -64,6 +75,76 @@ app.get('/pruebaPlanes', async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   });
+
+
+  app.post('/enviar-notificacion', async (req, res) => {
+    const { token } = req.body;
+  
+    if (!token) {
+      return res.status(400).json({ error: 'Falta el token' });
+    }
+  
+    try {
+      await sendPushNotification(token, '¡Hola!', 'Esta es una notificación desde el backend');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error al enviar notificación:', err);
+      res.status(500).json({ error: 'Error interno al enviar notificación' });
+    }
+  });
+
+  app.post('/api/push-token', async (req, res) => {
+    const { userId, expoPushToken } = req.body;
+  
+    const { error } = await supabase
+      .from('perfiles')
+      .update({ push_token: expoPushToken })
+      .eq('id', userId);
+  
+    if (error) {
+      console.error('Error actualizando token:', error);
+      return res.status(500).json({ error: 'Error al guardar token' });
+    }
+  
+    res.json({ success: true });
+  });
+
+  app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+  
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+  
+    if (authError) {
+      console.error('Error al iniciar sesión:', authError);
+      return res.status(401).json({ error: authError.message });
+    }
+  
+    const userId = authData.user.id;
+  
+    const { data: perfilData, error: perfilError } = await supabase
+      .from('perfiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+  
+    if (perfilError) {
+      console.error('Error al obtener perfil:', perfilError);
+      return res.status(500).json({ error: 'No se pudo obtener el perfil del usuario' });
+    }
+  
+    res.json({
+      message: 'Login exitoso',
+      user: authData.user,
+      perfil: perfilData
+    });
+  });
+  
+  
+  
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
+
