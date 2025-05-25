@@ -51,7 +51,7 @@ app.post('/registro', async (req, res) => {
   ]);
 
   if (profileError) {
-    return res.status(400).json({ error: profileError.message });
+    return res.status(400).json({ error: profileError.message || JSON.stringify(profileError) || 'Error desconocido en profiles' });
   }
 
   res.json({
