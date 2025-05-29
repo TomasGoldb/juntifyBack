@@ -31,25 +31,22 @@ app.get('/', (req, res) => {
 });
 
 app.post('/registro', async (req, res) => {
-    const { email, password, username, nombre, apellido } = req.body;
+  const { email, password, username, nombre, apellido } = req.body;
 
   // Paso 1: Crear el usuario en Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password
   });
-  
+
   if (authError) {
     console.error('Error al crear el usuario:', authError);
     return res.status(400).json({ error: authError.message ?? authError ?? 'Error desconocido en Auth' });
   }
 
-
-
-
   const userId = authData.user.id;
 
-  // Paso 2: Insertar los datos adicionales en la tabla profiles
+  // Paso 2: Insertar los datos adicionales en la tabla perfiles
   const { error: profileError } = await supabase.from('perfiles').insert([
     {
       id: userId,
@@ -58,18 +55,32 @@ app.post('/registro', async (req, res) => {
       apellido
     }
   ]);
-  console.log('profileError:', profileError);
-  console.log(profileError)
-  if (profileError) {
-  console.error('Error al insertar en profiles:', profileError);
-  return res.status(400).json({ error: profileError.message ?? profileError ?? 'Error desconocido en profiles' });
-}
 
+  if (profileError) {
+    console.error('Error al insertar en perfiles:', profileError);
+    return res.status(400).json({ error: profileError.message ?? profileError ?? 'Error desconocido en perfiles' });
+  }
+
+  // Paso 3: Obtener el perfil recién insertado
+  const { data: perfil, error: fetchError } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error al obtener el perfil:', fetchError);
+    return res.status(400).json({ error: fetchError.message ?? fetchError });
+  }
+
+  // Paso 4: Enviar usuario y perfil juntos
   res.json({
     message: 'Usuario registrado exitosamente. Revisa tu correo para confirmar.',
-    user: authData.user
+    user: authData.user,
+    perfil // <-- esto es lo que faltaba
   });
 });
+
 app.get('/pruebaPlanes', async (req, res) => {
     const { data, error } = await supabase.from('Planes').select();
     if (error) return res.status(500).json({ error: error.message });
