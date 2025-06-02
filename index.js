@@ -153,6 +153,30 @@ app.get('/pruebaPlanes', async (req, res) => {
     });
   });
   
+
+  app.get('/amigos/:userId', async (req, res) => {
+    const { userId } = req.params;
+  
+    const { data, error } = await supabase
+      .from('Amigos')
+      .select('idperfil1, idperfil2')
+      .or(`idperfil1.eq.${userId},idperfil2.eq.${userId}`)
+      .limit(100);
+  
+    if (error) {
+      console.error('Error en consulta:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  
+    const amigos = data.map(row =>
+      row.idperfil1 === userId ? row.idperfil2 : row.idperfil1
+    );
+  
+    res.json(amigos);
+  });
+  
+  
+  
   
   
 app.listen(PORT, () => {
