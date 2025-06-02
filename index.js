@@ -154,26 +154,41 @@ app.get('/pruebaPlanes', async (req, res) => {
   });
   
 
-  app.get('/amigos/:userId', async (req, res) => {
-    const { userId } = req.params;
-  
-    const { data, error } = await supabase
-      .from('Amigos')
-      .select('idperfil1, idperfil2')
-      .or(`idperfil1.eq.${userId},idperfil2.eq.${userId}`)
-      .limit(100);
-  
-    if (error) {
-      console.error('Error en consulta:', error);
-      return res.status(500).json({ error: error.message });
-    }
-  
-    const amigos = data.map(row =>
-      row.idperfil1 === userId ? row.idperfil2 : row.idperfil1
-    );
-  
-    res.json(amigos);
-  });
+app.get('/amigos/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  // Paso 1: Obtener todas las relaciones de amistad
+  const { data: relaciones, error } = await supabase
+    .from('Amigos')
+    .select('idperfil1, idperfil2')
+    .or(`idperfil1.eq.${userId},idperfil2.eq.${userId}`)
+    .limit(100);
+
+  if (error) {
+    console.error('Error en consulta de amigos:', error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  // Paso 2: Extraer solo los ID de los amigos (excluyendo el propio userId)
+  const amigoIds = relaciones.map(row =>
+    row.idperfil1 === userId ? row.idperfil2 : row.idperfil1
+  );
+
+  // Paso 3: Obtener los perfiles de esos amigos
+  const { data: perfiles, error: errorPerfiles } = await supabase
+    .from('perfiles')
+    .select('*')
+    .in('id', amigoIds);
+
+  if (errorPerfiles) {
+    console.error('Error al obtener perfiles de amigos:', errorPerfiles);
+    return res.status(500).json({ error: errorPerfiles.message });
+  }
+
+  // Paso 4: Devolver los perfiles completos
+  res.json(perfiles);
+});
+
   
   
   
