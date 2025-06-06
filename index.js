@@ -154,25 +154,30 @@ app.get('/pruebaPlanes', async (req, res) => {
   });
   
 
+
 app.get('/amigos/:userId', async (req, res) => {
   const { userId } = req.params;
 
-  // Paso 1: Obtener todas las relaciones de amistad
+  // Paso 1: Obtener todas las amistades aceptadas donde el userId sea solicitador o receptor
   const { data: relaciones, error } = await supabase
     .from('Amigos')
-    .select('idperfil1, idperfil2')
-    .or(`idperfil1.eq.${userId},idperfil2.eq.${userId}`)
-    .limit(100);
+    .select('idSolicitador, idReceptor')
+    .eq('seAceptoSolicitud', true)
+    .or(`idSolicitador.eq.${userId},idReceptor.eq.${userId}`);
 
   if (error) {
     console.error('Error en consulta de amigos:', error);
     return res.status(500).json({ error: error.message });
   }
 
-  // Paso 2: Extraer solo los ID de los amigos (excluyendo el propio userId)
+  // Paso 2: Obtener los IDs de los amigos (el otro participante en la relación)
   const amigoIds = relaciones.map(row =>
-    row.idperfil1 === userId ? row.idperfil2 : row.idperfil1
+    row.idSolicitador === userId ? row.idReceptor : row.idSolicitador
   );
+
+  if (amigoIds.length === 0) {
+    return res.json([]); // No hay amigos
+  }
 
   // Paso 3: Obtener los perfiles de esos amigos
   const { data: perfiles, error: errorPerfiles } = await supabase
@@ -192,6 +197,8 @@ app.get('/amigos/:userId', async (req, res) => {
   
   
   
+
+
   
   
 app.listen(PORT, () => {
