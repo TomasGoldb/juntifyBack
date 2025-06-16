@@ -306,6 +306,61 @@ app.get('/amigos/buscar/:userId/:query', async (req, res) => {
 
 
 
+// AGREGAR una notificación a un usuario
+app.post('/notificaciones/agregar', async (req, res) => {
+  const { idPerfil, textoNoti, idTipoNoti } = req.body;
+  if (!idPerfil || !textoNoti || !idTipoNoti) {
+    return res.status(400).json({ error: 'Faltan parámetros: idPerfil, textoNoti, idTipoNoti' });
+  }
+  const { data, error } = await supabase
+    .from('Notificaciones')
+    .insert([{ idPerfil, textoNoti, idTipoNoti }])
+    .select()
+    .single();
+  if (error) {
+    console.error('Error al agregar notificación:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ success: true, notificacion: data });
+});
+
+// BORRAR una notificación de un usuario
+app.delete('/notificaciones/borrar', async (req, res) => {
+  const { idNoti, idPerfil } = req.body;
+  if (!idNoti || !idPerfil) {
+    return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
+  }
+  // Solo deja borrar si la notificación pertenece a ese perfil (seguridad)
+  const { error } = await supabase
+    .from('Notificaciones')
+    .delete()
+    .eq('idNoti', idNoti)
+    .eq('idPerfil', idPerfil);
+  if (error) {
+    console.error('Error al borrar notificación:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ success: true, message: 'Notificación borrada' });
+});
+
+// Obtener todas las notificaciones de un usuario (ordenadas por idNoti descendente)
+app.get('/notificaciones/:idPerfil', async (req, res) => {
+  const { idPerfil } = req.params;
+  if (!idPerfil) {
+    return res.status(400).json({ error: 'Falta el parámetro idPerfil' });
+  }
+  const { data, error } = await supabase
+    .from('Notificaciones')
+    .select('idNoti, textoNoti, idTipoNoti, idPerfil')
+    .eq('idPerfil', idPerfil)
+    .order('idNoti', { ascending: false });
+  if (error) {
+    console.error('Error al listar notificaciones:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data);
+});
+
   
   
 app.listen(PORT, () => {
