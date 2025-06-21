@@ -308,13 +308,13 @@ app.get('/amigos/buscar/:userId/:query', async (req, res) => {
 
 // AGREGAR una notificación a un usuario
 app.post('/notificaciones/agregar', async (req, res) => {
-  const { idPerfil, textoNoti, idTipoNoti } = req.body;
-  if (!idPerfil || !textoNoti || !idTipoNoti) {
-    return res.status(400).json({ error: 'Faltan parámetros: idPerfil, textoNoti, idTipoNoti' });
+  const { idPerfil, textoNoti, idTipoNoti,idUsuario=null,idPlan=null } = req.body;
+  if (!idPerfil || !textoNoti || !idTipoNoti || !idUsuario || !idPlan) { 
+    return res.status(400).json({ error: 'Faltan parámetros' });
   }
   const { data, error } = await supabase
     .from('Notificaciones')
-    .insert([{ idPerfil, textoNoti, idTipoNoti }])
+    .insert([{ idPerfil, textoNoti, idTipoNoti, idUsuario, idPlan }])
     .select()
     .single();
   if (error) {
