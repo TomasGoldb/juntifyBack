@@ -377,6 +377,51 @@ app.get('/notificaciones/noti/:idNoti', async (req, res) => {
   }
   res.json(data);
 });
+
+// Aceptar invitación a plan
+// Espera: { idPlan, idPerfil } en el body
+app.post('/planes/aceptar-invitacion', async (req, res) => {
+  const { idPlan, idPerfil } = req.body;
+  if (!idPlan || !idPerfil) {
+    return res.status(400).json({ error: 'Faltan parámetros: idPlan, idPerfil' });
+  }
+
+  // Actualiza el registro de ParticipantePlan para marcarlo como aceptado
+  const { error } = await supabase
+    .from('ParticipantePlan')
+    .update({ aceptado: true }) // Asume que tienes un campo "aceptado" boolean en ParticipantePlan
+    .eq('idPlan', idPlan)
+    .eq('idPerfil', idPerfil);
+
+  if (error) {
+    console.error('Error al aceptar invitación:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ success: true, message: 'Invitación aceptada' });
+});
+
+// Rechazar invitación a plan
+// Espera: { idPlan, idPerfil } en el body
+app.post('/planes/declinar-invitacion', async (req, res) => {
+  const { idPlan, idPerfil } = req.body;
+  if (!idPlan || !idPerfil) {
+    return res.status(400).json({ error: 'Faltan parámetros: idPlan, idPerfil' });
+  }
+
+  // Elimina el registro de ParticipantePlan (el usuario rechaza la invitación)
+  const { error } = await supabase
+    .from('ParticipantePlan')
+    .delete()
+    .eq('idPlan', idPlan)
+    .eq('idPerfil', idPerfil);
+
+  if (error) {
+    console.error('Error al rechazar invitación:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ success: true, message: 'Invitación rechazada' });
+});
+
   
   
 app.listen(PORT, () => {
