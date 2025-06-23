@@ -423,6 +423,13 @@ app.post('/planes/declinar-invitacion', async (req, res) => {
 });
 
   
+app.put('/perfiles/:id/foto', async (req, res) => {
+  const { id } = req.params;
+  const { foto } = req.body; // debería ser la URL pública
+  const { error } = await supabase.from('perfiles').update({ foto }).eq('id', id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
   
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
