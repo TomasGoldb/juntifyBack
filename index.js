@@ -361,6 +361,22 @@ app.get('/notificaciones/:idPerfil', async (req, res) => {
   res.json(data);
 });
 
+app.get('/notificaciones/noti/:idNoti', async (req, res) => {
+  const { idNoti } = req.params;
+  if (!idNoti) {
+    return res.status(400).json({ error: 'Falta el parámetro idNoti' });
+  }
+  const { data, error } = await supabase
+    .from('Notificaciones')
+    .select('*')
+    .eq('idNoti', idNoti)
+    .single();
+  if (error) {
+    console.error('Error al obtener la notificación:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data);
+});
   
   
 app.listen(PORT, () => {
