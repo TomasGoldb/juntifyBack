@@ -430,6 +430,24 @@ app.put('/perfiles/:id/foto', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
+
+// Obtener un plan por su idPlan
+app.get('/planes/:idPlan', async (req, res) => {
+  const { idPlan } = req.params;
+  if (!idPlan) {
+    return res.status(400).json({ error: 'Falta el parámetro idPlan' });
+  }
+  const { data, error } = await supabase
+    .from('Planes')
+    .select('*')
+    .eq('idPlan', idPlan)
+    .single();
+  if (error) {
+    console.error('Error al obtener el plan:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data);
+});
   
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
