@@ -448,6 +448,34 @@ app.get('/planes/:idPlan', async (req, res) => {
   }
   res.json(data);
 });
+
+app.get('/mis-planes/:userId', async (req, res) => {
+  const { userId } = req.params;
+  // 1. Buscar todos los idPlan donde el usuario participa
+  const { data: participaciones, error: partError } = await supabase
+    .from('ParticipantePlan')
+    .select('idPlan')
+    .eq('idPerfil', userId);
+
+  if (partError) return res.status(500).json({ error: partError.message });
+
+  const idPlanesParticipa = participaciones.map(p => p.idPlan);
+
+  // 2. Buscar todos los planes donde es anfitrión o participante
+  let filter = '';
+  if (idPlanesParticipa.length > 0) {
+    filter = `idPlan.in.(${idPlanesParticipa.join(',')})`;
+  }
+
+  const { data: planes, error: planesError } = await supabase
+    .from('Planes')
+    .select('*')
+    .or(`idAnfitrion.eq.${userId}${idPlanesParticipa.length > 0 ? `,${filter}` : ''}`);
+
+  if (planesError) return res.status(500).json({ error: planesError.message });
+
+  res.json(planes);
+});
   
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
