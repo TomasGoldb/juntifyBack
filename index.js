@@ -449,28 +449,30 @@ app.get('/planes/:idPlan', async (req, res) => {
   res.json(data);
 });
 
+// Obtener todos los planes donde el usuario es participante (aceptado) o anfitrión
 app.get('/mis-planes/:userId', async (req, res) => {
   const { userId } = req.params;
-  // 1. Buscar todos los idPlan donde el usuario participa
+  // 1. Buscar idPlanes donde el usuario participa y aceptó
   const { data: participaciones, error: partError } = await supabase
     .from('ParticipantePlan')
     .select('idPlan')
-    .eq('idPerfil', userId);
+    .eq('idPerfil', userId)
+    .eq('aceptado', true);
 
   if (partError) return res.status(500).json({ error: partError.message });
 
   const idPlanesParticipa = participaciones.map(p => p.idPlan);
 
-  // 2. Buscar todos los planes donde es anfitrión o participante
-  let filter = '';
+  // 2. Buscar todos los planes donde es anfitrión o participante (aceptado)
+  let filters = [`idAnfitrion.eq.${userId}`];
   if (idPlanesParticipa.length > 0) {
-    filter = `idPlan.in.(${idPlanesParticipa.join(',')})`;
+    filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
   }
 
   const { data: planes, error: planesError } = await supabase
     .from('Planes')
     .select('*')
-    .or(`idAnfitrion.eq.${userId}${idPlanesParticipa.length > 0 ? `,${filter}` : ''}`);
+    .or(filters.join(','));
 
   if (planesError) return res.status(500).json({ error: planesError.message });
 
