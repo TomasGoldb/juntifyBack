@@ -431,6 +431,40 @@ app.put('/perfiles/:id/foto', async (req, res) => {
   res.json({ success: true });
 });
   
+// Eliminar un plan y sus participantes
+app.delete('/planes/:idPlan', async (req, res) => {
+  const { idPlan } = req.params;
+
+  try {
+    // 1. Eliminar los participantes del plan
+    const { error: partError } = await supabase
+      .from('ParticipantePlan')
+      .delete()
+      .eq('idPlan', idPlan);
+
+    if (partError) {
+      console.error('Error al eliminar participantes:', partError);
+      return res.status(500).json({ error: 'Error al eliminar participantes del plan' });
+    }
+
+    // 2. Eliminar el plan
+    const { error: planError } = await supabase
+      .from('Planes')
+      .delete()
+      .eq('idPlan', idPlan);
+
+    if (planError) {
+      console.error('Error al eliminar plan:', planError);
+      return res.status(500).json({ error: 'Error al eliminar el plan' });
+    }
+
+    res.status(204).send(); // Eliminado correctamente, sin contenido
+  } catch (err) {
+    console.error('Error general al eliminar plan:', err);
+    res.status(500).json({ error: 'Error interno al eliminar el plan' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
