@@ -430,6 +430,54 @@ app.put('/perfiles/:id/foto', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
+
+// Obtener un plan por su idPlan
+app.get('/planes/:idPlan', async (req, res) => {
+  const { idPlan } = req.params;
+  if (!idPlan) {
+    return res.status(400).json({ error: 'Falta el parámetro idPlan' });
+  }
+  const { data, error } = await supabase
+    .from('Planes')
+    .select('*')
+    .eq('idPlan', idPlan)
+    .single();
+  if (error) {
+    console.error('Error al obtener el plan:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data);
+});
+
+// Obtener todos los planes donde el usuario es participante (aceptado) o anfitrión
+app.get('/mis-planes/:userId', async (req, res) => {
+  const { userId } = req.params;
+  // 1. Buscar idPlanes donde el usuario participa y aceptó
+  const { data: participaciones, error: partError } = await supabase
+    .from('ParticipantePlan')
+    .select('idPlan')
+    .eq('idPerfil', userId)
+    .eq('aceptado', true);
+
+  if (partError) return res.status(500).json({ error: partError.message });
+
+  const idPlanesParticipa = participaciones.map(p => p.idPlan);
+
+  // 2. Buscar todos los planes donde es anfitrión o participante (aceptado)
+  let filters = [`idAnfitrion.eq.${userId}`];
+  if (idPlanesParticipa.length > 0) {
+    filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
+  }
+
+  const { data: planes, error: planesError } = await supabase
+    .from('Planes')
+    .select('*')
+    .or(filters.join(','));
+
+  if (planesError) return res.status(500).json({ error: planesError.message });
+
+  res.json(planes);
+});
   
 // Eliminar un plan y sus participantes
 app.delete('/planes/:idPlan', async (req, res) => {
