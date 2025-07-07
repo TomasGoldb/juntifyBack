@@ -513,6 +513,48 @@ app.delete('/planes/:idPlan', async (req, res) => {
   }
 });
 
+// Trae todos los datos de un plan: info del plan, participantes (con perfil) y el idLugar
+app.get('/planes/:idPlan/detalle', async (req, res) => {
+  const { idPlan } = req.params;
+
+  // 1. Traer el plan
+  const { data: plan, error: planError } = await supabase
+    .from('Planes')
+    .select('*')
+    .eq('idPlan', idPlan)
+    .single();
+
+  if (planError || !plan) {
+    return res.status(404).json({ error: 'Plan no encontrado' });
+  }
+
+  // 2. Traer los participantes con perfil
+  const { data: participantes, error: partError } = await supabase
+    .from('ParticipantePlan')
+    .select('idPerfil, perfiles: idPerfil (id, nombre, username, foto)')
+    .eq('idPlan', idPlan);
+
+  if (partError) {
+    return res.status(500).json({ error: 'Error al obtener participantes' });
+  }
+
+  // 3. Armar la lista de participantes con datos útiles
+  const participantesList = participantes.map(row => ({
+    id: row.idPerfil,
+    nombre: row.perfiles?.nombre,
+    username: row.perfiles?.username,
+    avatarUrl: row.perfiles?.foto,
+  }));
+
+  // 4. Devolver todo junto
+  res.json({
+    ...plan,
+    participantes: participantesList,
+    // El campo idLugar lo devuelves tal cual, el frontend decide si es place_id o dirección
+    // Si quieres expandir el lugar desde el backend, avísame y te armo el fetch a Google Places aquí también
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
