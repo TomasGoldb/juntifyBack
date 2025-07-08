@@ -30,8 +30,8 @@ app.get('/', (req, res) => {
 
 const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
-    port: 465,
-    secure: true, // true para puerto 465
+    port: 587,
+    secure: false, // true para puerto 465
     auth: {
         user: process.env.BREVO_USER, // tu correo verificado en Brevo
         pass: process.env.BREVO_PASS  // la clave SMTP
