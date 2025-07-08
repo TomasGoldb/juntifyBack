@@ -28,14 +28,15 @@ app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify');
 });
 
+
 const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 465,
-  secure: true, // true para puerto 465
+  host: 'smtp.elasticemail.com',
+  port: 587,         // También puede ser 2525
+  secure: false,     // true para 465, false para 587 y 2525
   auth: {
-      user: process.env.BREVO_USER, // tu correo verificado en Brevo
-      pass: process.env.BREVO_PASS  // la clave SMTP
-  }
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
+  },
 });
 
 app.post('/mandar-mail', async (req, res) => {
