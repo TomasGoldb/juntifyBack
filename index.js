@@ -6,6 +6,8 @@ global.fetch = fetch;
 import dotenv from 'dotenv';
 dotenv.config();
 
+import nodemailer from 'nodemailer'
+
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sendPushNotification } from './sendPushNotification.js'; // Ajusta la ruta según corresponda
@@ -25,6 +27,39 @@ app.use(express.json()); // para poder leer JSON en POST y PUT
 app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify');
 });
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp-relay.brevo.com',
+  port: 465,
+  secure: true, // true para puerto 465
+  auth: {
+      user: process.env.BREVO_USER, // tu correo verificado en Brevo
+      pass: process.env.BREVO_PASS  // la clave SMTP
+  }
+});
+
+app.post('/mandar-mail', async (req, res) => {
+  const { to, subject, message } = req.body;
+
+  try {
+      await transporter.sendMail({
+          from: `"TuiTui" <${process.env.BREVO_USER}>`,
+          to,
+          subject,
+          text: message
+      });
+      res.send('Email enviado con éxito');
+  } catch (error) {
+      console.error(error);
+      res.status(500).send('Error al enviar el correo');
+  }
+});
+
+
+
+
+
+
 
 // Registro de usuario
 app.post('/registro', async (req, res) => {
