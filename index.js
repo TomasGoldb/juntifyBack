@@ -28,32 +28,31 @@ app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify');
 });
 
-
 const transporter = nodemailer.createTransport({
-  host: 'smtp.elasticemail.com',
-  port: 587,         // También puede ser 2525
-  secure: false,     // true para 465, false para 587 y 2525
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
+    host: 'smtp-relay.brevo.com',
+    port: 465,
+    secure: true, // true para puerto 465
+    auth: {
+        user: process.env.BREVO_USER, // tu correo verificado en Brevo
+        pass: process.env.BREVO_PASS  // la clave SMTP
+    }
 });
 
 app.post('/mandar-mail', async (req, res) => {
-  const { to, subject, message } = req.body;
+    const { to, subject, message } = req.body;
 
-  try {
-      await transporter.sendMail({
-          from: `"TuiTui" <${process.env.BREVO_USER}>`,
-          to,
-          subject,
-          text: message
-      });
-      res.send('Email enviado con éxito');
-  } catch (error) {
-      console.error(error);
-      res.status(500).send('Error al enviar el correo');
-  }
+    try {
+        await transporter.sendMail({
+            from: `"TuiTui" <${process.env.BREVO_USER}>`,
+            to,
+            subject,
+            text: message
+        });
+        res.send('Email enviado con éxito');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al enviar el correo');
+    }
 });
 
 
