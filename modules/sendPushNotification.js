@@ -19,4 +19,4 @@ export async function sendPushNotification(expoPushToken, title, body) {
   
     const data = await response.json();
     console.log('Resultado del envío:', data);
-  }
+  } 
