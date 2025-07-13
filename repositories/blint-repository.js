@@ -6,19 +6,23 @@ const client = new InferenceClient(HF_TOKEN);
 export class BlintRepository {
 
     
-async llamarModeloChat(prompt) {
+async llamarModeloChat(systemPrompt, userPrompt) {
     try {
       const respuesta = await client.chatCompletion({
         provider: "together",
         model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
         messages: [
           {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
             role: "user",
-            content: prompt,
+            content: userPrompt,
           },
         ],
         temperature: 0.7,
-        max_tokens: 250,
+        max_tokens: 300,
       });
   
       return respuesta.choices?.[0]?.message?.content || '';

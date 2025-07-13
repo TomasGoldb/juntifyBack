@@ -16,27 +16,41 @@ export class BlintService {
       return res.status(400).json({ error: "Se requiere un campo 'text' (string) en el body." });
     }
   
-    const prompt = `
-  Extraé de forma concisa ideas concretas del siguiente texto, especialmente aquellas que sirvan para describir lugares gastronómicos. 
-  Cada idea debe ser una etiqueta breve de 1 a 3 palabras máximo, sin explicaciones ni frases genéricas. 
-  No incluyas frases como "posiblemente se refiera a..." o comentarios adicionales. 
-  Devolvé solo una lista con una idea por línea. 
-  Ejemplos: "pasta casera", "bar vegano", "comida mexicana", "ambiente familiar", "café de especialidad".
-  
-  Texto:
-  ${text}
-  `.trim();
+    const systemPrompt = `Eres un asistente experto en análisis de texto y extracción de ideas clave. Tu tarea es extraer ideas concretas y específicas del texto proporcionado.
+
+REGLAS IMPORTANTES:
+- Extrae ideas que puedan servir para buscar lugares, actividades, servicios o experiencias
+- Cada idea debe ser una etiqueta breve de 1 a 4 palabras máximo
+- No incluyas explicaciones, comentarios o frases genéricas
+- No uses frases como "posiblemente", "tal vez", "podría ser"
+- Devuelve SOLO la lista de ideas, una por línea
+- Las ideas pueden ser de cualquier tipo: gastronomía, entretenimiento, cultura, deportes, etc.
+
+Ejemplos de ideas válidas:
+- "restaurante italiano"
+- "museo de arte"
+- "parque temático"
+- "teatro independiente"
+- "café de especialidad"
+- "club nocturno"
+- "gimnasio 24h"
+- "biblioteca pública"`;
+
+    const userPrompt = `Analiza el siguiente texto y extrae las ideas más relevantes que podrían servir para buscar lugares o actividades:
+
+${text}`;
   
     try {
-      const salida = await this.blintRepository.llamarModeloChat(prompt);
+      const salida = await this.blintRepository.llamarModeloChat(systemPrompt, userPrompt);
   
       const ideas = salida
         .split("\n")
         .map(l => l.replace(/^[-*•\d.\s]+/, "").trim())
-        .filter(l => l && !/^aquí tienes|lista de|principales/i.test(l));
+        .filter(l => l && l.length > 0 && !/^aquí tienes|lista de|principales|ideas|sugerencias/i.test(l.toLowerCase()));
   
       res.json({ ideas });
     } catch (err) {
+      console.error("❌ Error en extractIdeas:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -45,7 +59,11 @@ export class BlintService {
     const { ideas, lat, lng } = req.body;
   
     if (!GOOGLE_MAPS_API_KEY) {
-      return res.status(500).json({ error: "GOOGLE_MAPS_API_KEY no configurada en variables de entorno." });
+      console.error("❌ GOOGLE_MAPS_API_KEY no configurada");
+      return res.status(500).json({ 
+        error: "GOOGLE_MAPS_API_KEY no configurada en variables de entorno.",
+        details: "Configura la variable de entorno GOOGLE_MAPS_API_KEY en Railway"
+      });
     }
     if (!ideas || !Array.isArray(ideas) || ideas.length === 0) {
       return res.status(400).json({ error: "Se requiere un array 'ideas' en el body." });
@@ -56,32 +74,53 @@ export class BlintService {
   
     try {
       const foundPlaceIds = new Set();
+      const foundPlaces = [];
   
       for (const idea of ideas) {
-        if (foundPlaceIds.size >= 5) break;
+        if (foundPlaceIds.size >= 8) break; // Aumentamos el límite
   
         const params = new URLSearchParams({
           key: GOOGLE_MAPS_API_KEY,
           location: `${lat},${lng}`,
-          radius: "500",
+          radius: "2000", // Aumentamos el radio para más opciones
           keyword: idea,
           language: "es",
+          type: "establishment" // Buscar establecimientos
         });
   
         const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params.toString()}`;
+        console.log(`🔍 Buscando: ${idea}`);
+        
         const mapsRes = await axios.get(url);
         const results = mapsRes.data?.results || [];
   
         for (const place of results) {
-          if (foundPlaceIds.size >= 5) break;
-          if (place.place_id) foundPlaceIds.add(place.place_id);
+          if (foundPlaceIds.size >= 8) break;
+          if (place.place_id && !foundPlaceIds.has(place.place_id)) {
+            foundPlaceIds.add(place.place_id);
+            foundPlaces.push({
+              place_id: place.place_id,
+              name: place.name,
+              rating: place.rating,
+              vicinity: place.vicinity,
+              types: place.types
+            });
+          }
         }
       }
   
-      res.json({ place_ids: Array.from(foundPlaceIds) });
+      console.log(`✅ Encontrados ${foundPlaces.length} lugares únicos`);
+      res.json({ 
+        place_ids: Array.from(foundPlaceIds),
+        places: foundPlaces,
+        total_found: foundPlaces.length
+      });
     } catch (err) {
       console.error("⚠️ Error al buscar lugares en Google Maps:", err?.response?.data || err.message || err);
-      res.status(500).json({ error: "Error al buscar lugares en Google Maps." });
+      res.status(500).json({ 
+        error: "Error al buscar lugares en Google Maps.",
+        details: err.message 
+      });
     }
   }
   
