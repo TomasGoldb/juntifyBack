@@ -77,24 +77,26 @@ ${text}`;
       const foundPlaces = [];
   
       for (const idea of ideas) {
-        if (foundPlaceIds.size >= 8) break; // Aumentamos el límite
+        if (foundPlaceIds.size >= 8) break;
   
-        const params = new URLSearchParams({
+        // Buscar primero en radio pequeño (500m) para lugares cercanos
+        const paramsCercanos = new URLSearchParams({
           key: GOOGLE_MAPS_API_KEY,
           location: `${lat},${lng}`,
-          radius: "2000", // Aumentamos el radio para más opciones
+          radius: "500", // Radio pequeño para lugares cercanos
           keyword: idea,
           language: "es",
-          type: "establishment" // Buscar establecimientos
+          type: "establishment"
         });
   
-        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params.toString()}`;
-        console.log(`🔍 Buscando: ${idea}`);
+        const urlCercanos = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${paramsCercanos.toString()}`;
+        console.log(`🔍 Buscando cercanos: ${idea} (500m)`);
         
-        const mapsRes = await axios.get(url);
-        const results = mapsRes.data?.results || [];
+        const mapsResCercanos = await axios.get(urlCercanos);
+        const resultsCercanos = mapsResCercanos.data?.results || [];
   
-        for (const place of results) {
+        // Agregar lugares cercanos primero
+        for (const place of resultsCercanos) {
           if (foundPlaceIds.size >= 8) break;
           if (place.place_id && !foundPlaceIds.has(place.place_id)) {
             foundPlaceIds.add(place.place_id);
@@ -103,17 +105,62 @@ ${text}`;
               name: place.name,
               rating: place.rating,
               vicinity: place.vicinity,
-              types: place.types
+              types: place.types,
+              distance: "cercano"
             });
+          }
+        }
+  
+        // Si no encontramos suficientes lugares cercanos, buscar en radio mayor
+        if (foundPlaceIds.size < 8) {
+          const paramsLejanos = new URLSearchParams({
+            key: GOOGLE_MAPS_API_KEY,
+            location: `${lat},${lng}`,
+            radius: "1500", // Radio mayor solo si es necesario
+            keyword: idea,
+            language: "es",
+            type: "establishment"
+          });
+  
+          const urlLejanos = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${paramsLejanos.toString()}`;
+          console.log(`🔍 Buscando adicionales: ${idea} (1500m)`);
+          
+          const mapsResLejanos = await axios.get(urlLejanos);
+          const resultsLejanos = mapsResLejanos.data?.results || [];
+  
+          for (const place of resultsLejanos) {
+            if (foundPlaceIds.size >= 8) break;
+            if (place.place_id && !foundPlaceIds.has(place.place_id)) {
+              foundPlaceIds.add(place.place_id);
+              foundPlaces.push({
+                place_id: place.place_id,
+                name: place.name,
+                rating: place.rating,
+                vicinity: place.vicinity,
+                types: place.types,
+                distance: "lejano"
+              });
+            }
           }
         }
       }
   
       console.log(`✅ Encontrados ${foundPlaces.length} lugares únicos`);
+      
+      // Separar lugares por distancia
+      const lugaresCercanos = foundPlaces.filter(p => p.distance === "cercano");
+      const lugaresLejanos = foundPlaces.filter(p => p.distance === "lejano");
+      
       res.json({ 
         place_ids: Array.from(foundPlaceIds),
         places: foundPlaces,
-        total_found: foundPlaces.length
+        total_found: foundPlaces.length,
+        cercanos: lugaresCercanos.length,
+        lejanos: lugaresLejanos.length,
+        search_radius: {
+          cercanos: "500m",
+          lejanos: "1500m"
+        }
       });
     } catch (err) {
       console.error("⚠️ Error al buscar lugares en Google Maps:", err?.response?.data || err.message || err);
