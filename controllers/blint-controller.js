@@ -6,6 +6,6 @@ const blintService = new BlintService();
 
 router.post('/extract-ideas', (req, res) => blintService.extractIdeas(req, res));
 router.post('/find-places', (req, res) => blintService.findPlaces(req, res));
-router.post('/place-details', (req, res) => blintService.placeDetails(req, res));
+router.get('/place-details', (req, res) => blintService.placeDetails(req, res));
 
 export default router; 

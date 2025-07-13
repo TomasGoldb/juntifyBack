@@ -1,4 +1,9 @@
 import { BlintRepository } from '../repositories/blint-repository.js';
+import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 export class BlintService {
   constructor() {
