@@ -1,5 +1,8 @@
 import { UserRepository } from '../repositories/user-repository.js';
 import { transporter } from '../configs/mailer-config.js';
+import jwt from 'jsonwebtoken';
+
+const SECRET_KEY = process.env.JWT_SECRET;
 
 export class UserService {
   constructor() {
@@ -29,10 +32,13 @@ export class UserService {
       const authData = await this.userRepository.login(email, password);
       const userId = authData.user.id;
       const perfil = await this.userRepository.obtenerPerfilPorId(userId);
+      // Generar token JWT
+      const token = jwt.sign({ userId, email }, SECRET_KEY, { expiresIn: '8h' });
       res.json({
         message: 'Login exitoso',
         user: authData.user,
-        perfil
+        perfil,
+        token
       });
     } catch (error) {
       res.status(401).json({ error: error.message || error });
