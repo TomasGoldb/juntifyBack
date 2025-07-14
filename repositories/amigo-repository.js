@@ -17,12 +17,13 @@ export class AmigoRepository {
     if (error) throw new Error(error.message);
   }
 
-  async aceptarSolicitud(idSolicitador, idReceptor) {
+  async aceptarSolicitud(idSolicitador, idReceptor, fechaActual) {
     const { error } = await supabase
       .from('Amigos')
       .update({ seAceptoSolicitud: true })
       .eq('idSolicitador', idSolicitador)
       .eq('idReceptor', idReceptor)
+      .eq('fecha_amigo', fechaActual)
       .eq('seAceptoSolicitud', false);
     if (error) throw new Error(error.message);
   }
@@ -47,16 +48,16 @@ export class AmigoRepository {
   }
 
   async buscarUsuarios(userId, query) {
-    // 1. Traer ids de amigos/pendientes
     const { data: relaciones } = await supabase
       .from('Amigos')
-      .select('idSolicitador, idReceptor')
-      .or(`idSolicitador.eq.${userId},idReceptor.eq.${userId}`);
+      .select('idSolicitador, idReceptor', 'fecha_amigo')
+      .or(`idSolicitador.eq.${userId},idReceptor.eq.${userId}, fecha_amigo.eq.${userId}`);
     const excluidos = new Set([userId]);
     if (relaciones) {
       relaciones.forEach(r => {
         excluidos.add(r.idSolicitador);
         excluidos.add(r.idReceptor);
+        excluidos.add(r.fecha_amigo);
       });
     }
     // 2. Buscar perfiles
