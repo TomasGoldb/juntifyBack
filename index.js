@@ -25,6 +25,7 @@ import { UserService } from './services/user-service.js';
 const userService = new UserService();
 app.post('/api/users/registro', (req, res) => userService.registro(req, res));
 app.post('/api/users/login', (req, res) => userService.login(req, res));
+app.use('/api/blint', blintController);
 
 // Middleware global para proteger el resto de rutas
 app.use(authenticateToken);
@@ -34,7 +35,7 @@ app.use('/api/users', userController);
 app.use('/api/planes', planController);
 app.use('/api/notificaciones', notificacionController);
 app.use('/api/amigos', amigoController);
-app.use('/api/blint', blintController);
+
 
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
