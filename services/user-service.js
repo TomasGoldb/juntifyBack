@@ -33,7 +33,7 @@ export class UserService {
       const userId = authData.user.id;
       const perfil = await this.userRepository.obtenerPerfilPorId(userId);
       // Generar token JWT
-      const token = jwt.sign({ userId, email }, SECRET_KEY, { expiresIn: '8h' });
+      const token = jwt.sign({ userId, email }, SECRET_KEY, { expiresIn: '30d' });
       res.json({
         message: 'Login exitoso',
         user: authData.user,

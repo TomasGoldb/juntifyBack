@@ -20,9 +20,11 @@ app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify. La mayoría de los endpoints requieren autenticación con JWT.');
 });
 
-// Endpoints públicos
-app.use('/api/users/registro', userController);
-app.use('/api/users/login', userController);
+// Endpoints públicos (login y registro)
+import { UserService } from './services/user-service.js';
+const userService = new UserService();
+app.post('/api/users/registro', (req, res) => userService.registro(req, res));
+app.post('/api/users/login', (req, res) => userService.login(req, res));
 
 // Middleware global para proteger el resto de rutas
 app.use(authenticateToken);
