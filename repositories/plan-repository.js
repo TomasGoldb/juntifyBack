@@ -17,11 +17,14 @@ export class PlanRepository {
       .select()
       .single();
     if (planError) throw new Error(planError.message);
-    // 2. Insertar participantes (incluye anfitrión)
+    // 2. Insertar participantes (anfitrión como participante, invitados como pendientes)
     const idPlan = planData.idPlan;
     const participantesSet = new Set(participantes);
-    participantesSet.add(idAnfitrion);
-    const participantesRows = Array.from(participantesSet).map(idPerfil => ({ idPlan, idPerfil }));
+    participantesSet.delete(idAnfitrion); // El anfitrión se maneja aparte
+    const participantesRows = [
+      { idPlan, idPerfil: idAnfitrion, estadoParticipante: 2 }, // anfitrión
+      ...Array.from(participantesSet).map(idPerfil => ({ idPlan, idPerfil, estadoParticipante: 1 })) // invitados
+    ];
     const { error: partError } = await supabase.from('ParticipantePlan').insert(participantesRows);
     if (partError) throw new Error(partError.message);
     return planData;
@@ -58,15 +61,15 @@ export class PlanRepository {
   }
 
   async planesDeUsuario(userId) {
-    // 1. Buscar idPlanes donde el usuario participa y aceptó
+    // 1. Buscar idPlanes donde el usuario participa y es participante (estadoParticipante = 2)
     const { data: participaciones, error: partError } = await supabase
       .from('ParticipantePlan')
       .select('idPlan')
       .eq('idPerfil', userId)
-      .eq('aceptado', true);
+      .eq('estadoParticipante', 2);
     if (partError) throw new Error(partError.message);
     const idPlanesParticipa = participaciones.map(p => p.idPlan);
-    // 2. Buscar todos los planes donde es anfitrión o participante (aceptado)
+    // 2. Buscar todos los planes donde es anfitrión o participante (estadoParticipante = 2)
     let filters = [`idAnfitrion.eq.${userId}`];
     if (idPlanesParticipa.length > 0) {
       filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
@@ -82,7 +85,7 @@ export class PlanRepository {
   async aceptarInvitacion(idPlan, idPerfil) {
     const { error } = await supabase
       .from('ParticipantePlan')
-      .update({ aceptado: true })
+      .update({ estadoParticipante: 2 })
       .eq('idPlan', idPlan)
       .eq('idPerfil', idPerfil);
     if (error) throw new Error(error.message);
