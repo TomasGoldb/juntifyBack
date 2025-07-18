@@ -18,14 +18,17 @@ export class AmigoRepository {
   }
 
   async aceptarSolicitud(idSolicitador, idReceptor, fechaActual) {
+    console.log('aceptarSolicitud params:', { idSolicitador, idReceptor, fechaActual });
     const { error } = await supabase
       .from('Amigos')
-      .update({ seAceptoSolicitud: true })
+      .update({ seAceptoSolicitud: true, fecha_amigo: fechaActual })
       .eq('idSolicitador', idSolicitador)
       .eq('idReceptor', idReceptor)
-      .eq('fecha_amigo', fechaActual)
       .eq('seAceptoSolicitud', false);
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error('Supabase error:', error);
+      throw new Error(error.message);
+    }
   }
 
   async rechazarSolicitud(idSolicitador, idReceptor) {

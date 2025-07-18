@@ -19,9 +19,9 @@ export class AmigoService {
   }
 
   async aceptarSolicitud(req, res) {
-    const { idSolicitador, idReceptor } = req.body;
+    const { idSolicitador, idReceptor, fecha_amigo } = req.body;
     try {
-      await this.amigoRepository.aceptarSolicitud(idSolicitador, idReceptor);
+      await this.amigoRepository.aceptarSolicitud(idSolicitador, idReceptor, fecha_amigo);
       res.json({ success: true, message: 'Solicitud aceptada' });
     } catch (error) {
       res.status(500).json({ error: error.message || error });
