@@ -43,6 +43,27 @@ export class PlanService {
     }
   }
 
+  async invitacionesPendientes(req, res) {
+    try {
+      const invitaciones = await this.planRepository.invitacionesPendientes(req.params.userId);
+      res.json(invitaciones);
+    } catch (err) {
+      res.status(500).json({ error: err.message || err });
+    }
+  }
+
+  async obtenerEstadoParticipacion(req, res) {
+    try {
+      const estado = await this.planRepository.obtenerEstadoParticipacion(
+        req.params.idPlan, 
+        req.params.idPerfil
+      );
+      res.json({ estadoParticipante: estado });
+    } catch (err) {
+      res.status(500).json({ error: err.message || err });
+    }
+  }
+
   async aceptarInvitacion(req, res) {
     try {
       await this.planRepository.aceptarInvitacion(req.body.idPlan, req.body.idPerfil);

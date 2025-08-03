@@ -21,7 +21,11 @@ export class PlanRepository {
     const idPlan = planData.idPlan;
     const participantesSet = new Set(participantes);
     participantesSet.add(idAnfitrion);
-    const participantesRows = Array.from(participantesSet).map(idPerfil => ({ idPlan, idPerfil }));
+    const participantesRows = Array.from(participantesSet).map(idPerfil => ({ 
+      idPlan, 
+      idPerfil,
+      estadoParticipante: idPerfil === idAnfitrion ? 1 : 0 // El anfitrión acepta automáticamente
+    }));
     const { error: partError } = await supabase.from('ParticipantePlan').insert(participantesRows);
     if (partError) throw new Error(partError.message);
     return planData;
@@ -44,7 +48,7 @@ export class PlanRepository {
     // 2. Traer los participantes con perfil
     const { data: participantes, error: partError } = await supabase
       .from('ParticipantePlan')
-      .select('idPerfil, perfiles: idPerfil (id, nombre, username, foto)')
+      .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
       .eq('idPlan', idPlan);
     if (partError) throw new Error('Error al obtener participantes');
     // 3. Armar la lista de participantes con datos útiles
@@ -53,17 +57,18 @@ export class PlanRepository {
       nombre: row.perfiles?.nombre,
       username: row.perfiles?.username,
       avatarUrl: row.perfiles?.foto,
+      estadoParticipante: row.estadoParticipante
     }));
     return { ...plan, participantes: participantesList };
   }
 
   async planesDeUsuario(userId) {
-    // 1. Buscar idPlanes donde el usuario participa y aceptó
+    // 1. Buscar idPlanes donde el usuario participa y aceptó (estadoParticipante = 1)
     const { data: participaciones, error: partError } = await supabase
       .from('ParticipantePlan')
       .select('idPlan')
       .eq('idPerfil', userId)
-      .eq('aceptado', true);
+      .eq('estadoParticipante', 1);
     if (partError) throw new Error(partError.message);
     const idPlanesParticipa = participaciones.map(p => p.idPlan);
     // 2. Buscar todos los planes donde es anfitrión o participante (aceptado)
@@ -79,10 +84,42 @@ export class PlanRepository {
     return planes;
   }
 
+  async invitacionesPendientes(userId) {
+    // Buscar planes donde el usuario tiene invitaciones pendientes (estadoParticipante = 0)
+    const { data: participaciones, error: partError } = await supabase
+      .from('ParticipantePlan')
+      .select('idPlan, estadoParticipante')
+      .eq('idPerfil', userId)
+      .eq('estadoParticipante', 0);
+    if (partError) throw new Error(partError.message);
+    
+    if (participaciones.length === 0) return [];
+    
+    const idPlanes = participaciones.map(p => p.idPlan);
+    const { data: planes, error: planesError } = await supabase
+      .from('Planes')
+      .select('*')
+      .in('idPlan', idPlanes);
+    if (planesError) throw new Error(planesError.message);
+    
+    return planes;
+  }
+
+  async obtenerEstadoParticipacion(idPlan, idPerfil) {
+    const { data, error } = await supabase
+      .from('ParticipantePlan')
+      .select('estadoParticipante')
+      .eq('idPlan', idPlan)
+      .eq('idPerfil', idPerfil)
+      .single();
+    if (error) throw new Error(error.message);
+    return data?.estadoParticipante || null;
+  }
+
   async aceptarInvitacion(idPlan, idPerfil) {
     const { error } = await supabase
       .from('ParticipantePlan')
-      .update({ aceptado: true })
+      .update({ estadoParticipante: 1 })
       .eq('idPlan', idPlan)
       .eq('idPerfil', idPerfil);
     if (error) throw new Error(error.message);
@@ -91,7 +128,7 @@ export class PlanRepository {
   async declinarInvitacion(idPlan, idPerfil) {
     const { error } = await supabase
       .from('ParticipantePlan')
-      .delete()
+      .update({ estadoParticipante: 2 })
       .eq('idPlan', idPlan)
       .eq('idPerfil', idPerfil);
     if (error) throw new Error(error.message);

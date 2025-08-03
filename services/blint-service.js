@@ -78,8 +78,7 @@ ${text}`;
   
       res.json({ ideas });
     } catch (err) {
-      console.error("❌ Error en extractIdeas:", err);
-      res.status(500).json({ error: err.message });
+      console.error("❌ Error en extractIdeas:", err      res.status(500).json({ error: err.message });
     }
   }
 
