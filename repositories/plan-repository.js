@@ -17,7 +17,7 @@ export class PlanRepository {
       .select()
       .single();
     if (planError) throw new Error(planError.message);
-    // 2. Insertar participantes (incluye anfitrión)
+    // 2. Insertar participantes (anfitrión como participante, invitados como pendientes)
     const idPlan = planData.idPlan;
     const participantesSet = new Set(participantes);
     participantesSet.add(idAnfitrion);
@@ -71,7 +71,7 @@ export class PlanRepository {
       .eq('estadoParticipante', 1);
     if (partError) throw new Error(partError.message);
     const idPlanesParticipa = participaciones.map(p => p.idPlan);
-    // 2. Buscar todos los planes donde es anfitrión o participante (aceptado)
+    // 2. Buscar todos los planes donde es anfitrión o participante (estadoParticipante = 2)
     let filters = [`idAnfitrion.eq.${userId}`];
     if (idPlanesParticipa.length > 0) {
       filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);

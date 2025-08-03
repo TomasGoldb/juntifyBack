@@ -28,16 +28,23 @@ export class UserRepository {
     // Paso 1: Obtener relaciones aceptadas
     const { data: relaciones, error } = await supabase
       .from('Amigos')
-      .select('idSolicitador, idReceptor')
+      .select('idSolicitador, idReceptor, fecha_amigo')
       .eq('seAceptoSolicitud', true)
       .or(`idSolicitador.eq.${userId},idReceptor.eq.${userId}`);
     if (error) throw new Error(error.message ?? error);
-    // Paso 2: Sacar los IDs de los amigos
-    const amigoIds = relaciones.map(row => row.idSolicitador === userId ? row.idReceptor : row.idSolicitador);
-    if (amigoIds.length === 0) return [];
+    // Paso 2: Sacar los IDs de los amigos y mapear la fecha
+    const amigosInfo = relaciones.map(row => ({
+      id: row.idSolicitador === userId ? row.idReceptor : row.idSolicitador,
+      fecha_amigo: row.fecha_amigo
+    }));
+    if (amigosInfo.length === 0) return [];
     // Paso 3: Obtener perfiles de esos amigos
-    const { data: perfiles, error: errorPerfiles } = await supabase.from('perfiles').select('*').in('id', amigoIds);
+    const { data: perfiles, error: errorPerfiles } = await supabase.from('perfiles').select('*').in('id', amigosInfo.map(a => a.id));
     if (errorPerfiles) throw new Error(errorPerfiles.message ?? errorPerfiles);
-    return perfiles;
+    // Paso 4: Unir perfil y fecha_amigo
+    return perfiles.map(perfil => {
+      const info = amigosInfo.find(a => a.id === perfil.id);
+      return { ...perfil, fecha_amigo: info ? info.fecha_amigo : null };
+    });
   }
 }
