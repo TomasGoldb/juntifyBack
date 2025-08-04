@@ -81,7 +81,31 @@ export class PlanRepository {
       .select('*')
       .or(filters.join(','));
     if (planesError) throw new Error(planesError.message);
-    return planes;
+    
+    // 3. Para cada plan, obtener los participantes
+    const planesConParticipantes = await Promise.all(
+      planes.map(async (plan) => {
+        const { data: participantes, error: partError } = await supabase
+          .from('ParticipantePlan')
+          .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
+          .eq('idPlan', plan.idPlan);
+        
+        if (partError) throw new Error('Error al obtener participantes');
+        
+        // Armar la lista de participantes con datos útiles
+        const participantesList = participantes.map(row => ({
+          id: row.idPerfil,
+          nombre: row.perfiles?.nombre,
+          username: row.perfiles?.username,
+          avatarUrl: row.perfiles?.foto,
+          estadoParticipante: row.estadoParticipante
+        }));
+        
+        return { ...plan, participantes: participantesList };
+      })
+    );
+    
+    return planesConParticipantes;
   }
 
   async invitacionesPendientes(userId) {
