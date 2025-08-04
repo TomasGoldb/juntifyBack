@@ -62,7 +62,7 @@ export class PlanRepository {
     return { ...plan, participantes: participantesList };
   }
 
-  async planesDeUsuario(userId) {
+  async planesDeUsuario(userId, limit = 10, offset = 0) {
     // 1. Buscar idPlanes donde el usuario participa y aceptó (estadoParticipante = 1)
     const { data: participaciones, error: partError } = await supabase
       .from('ParticipantePlan')
@@ -71,18 +71,30 @@ export class PlanRepository {
       .eq('estadoParticipante', 1);
     if (partError) throw new Error(partError.message);
     const idPlanesParticipa = participaciones.map(p => p.idPlan);
+    
     // 2. Buscar todos los planes donde es anfitrión o participante (estadoParticipante = 2)
     let filters = [`idAnfitrion.eq.${userId}`];
     if (idPlanesParticipa.length > 0) {
       filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
     }
+    
+    // 3. Obtener el total de planes para la paginación
+    const { count: totalPlanes, error: countError } = await supabase
+      .from('Planes')
+      .select('*', { count: 'exact', head: true })
+      .or(filters.join(','));
+    if (countError) throw new Error(countError.message);
+    
+    // 4. Obtener los planes con paginación
     const { data: planes, error: planesError } = await supabase
       .from('Planes')
       .select('*')
-      .or(filters.join(','));
+      .or(filters.join(','))
+      .order('fechaCreacion', { ascending: false })
+      .range(offset, offset + limit - 1);
     if (planesError) throw new Error(planesError.message);
     
-    // 3. Para cada plan, obtener los participantes
+    // 5. Para cada plan, obtener los participantes
     const planesConParticipantes = await Promise.all(
       planes.map(async (plan) => {
         const { data: participantes, error: partError } = await supabase
@@ -105,7 +117,15 @@ export class PlanRepository {
       })
     );
     
-    return planesConParticipantes;
+    return {
+      planes: planesConParticipantes,
+      paginacion: {
+        total: totalPlanes,
+        limit,
+        offset,
+        hasMore: offset + limit < totalPlanes
+      }
+    };
   }
 
   async invitacionesPendientes(userId) {

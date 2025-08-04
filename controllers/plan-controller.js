@@ -9,6 +9,7 @@ router.post('/crear', authenticateToken, (req, res) => planService.crearPlan(req
 router.get('/:idPlan', authenticateToken, (req, res) => planService.obtenerPlan(req, res));
 router.get('/:idPlan/detalle', authenticateToken, (req, res) => planService.detallePlan(req, res));
 router.get('/usuario/:userId', authenticateToken, (req, res) => planService.planesDeUsuario(req, res));
+router.get('/usuario/:userId/mas', authenticateToken, (req, res) => planService.cargarMasPlanes(req, res));
 router.get('/usuario/:userId/invitaciones-pendientes', authenticateToken, (req, res) => planService.invitacionesPendientes(req, res));
 router.get('/:idPlan/participacion/:idPerfil', authenticateToken, (req, res) => planService.obtenerEstadoParticipacion(req, res));
 router.post('/aceptar-invitacion', authenticateToken, (req, res) => planService.aceptarInvitacion(req, res));

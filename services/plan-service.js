@@ -36,8 +36,23 @@ export class PlanService {
 
   async planesDeUsuario(req, res) {
     try {
-      const planes = await this.planRepository.planesDeUsuario(req.params.userId);
-      res.json(planes);
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = parseInt(req.query.offset) || 0;
+      
+      const resultado = await this.planRepository.planesDeUsuario(req.params.userId, limit, offset);
+      res.json(resultado);
+    } catch (err) {
+      res.status(500).json({ error: err.message || err });
+    }
+  }
+
+  async cargarMasPlanes(req, res) {
+    try {
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = parseInt(req.query.offset) || 0;
+      
+      const resultado = await this.planRepository.planesDeUsuario(req.params.userId, limit, offset);
+      res.json(resultado);
     } catch (err) {
       res.status(500).json({ error: err.message || err });
     }
