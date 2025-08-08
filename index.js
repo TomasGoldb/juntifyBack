@@ -27,15 +27,20 @@ app.post('/api/users/registro', (req, res) => userService.registro(req, res));
 app.post('/api/users/login', (req, res) => userService.login(req, res));
 app.use('/api/blint', blintController);
 
-// Middleware global para proteger el resto de rutas
-app.use(authenticateToken);
+// Endpoint de prueba para verificar autenticación
+app.get('/api/test-auth', authenticateToken, (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Autenticación exitosa',
+    user: req.user 
+  });
+});
 
-// Rutas protegidas
-app.use('/api/users', userController);
-app.use('/api/planes', planController);
-app.use('/api/notificaciones', notificacionController);
-app.use('/api/amigos', amigoController);
-
+// Rutas protegidas con middleware de autenticación
+app.use('/api/users', authenticateToken, userController);
+app.use('/api/planes', authenticateToken, planController);
+app.use('/api/notificaciones', authenticateToken, notificacionController);
+app.use('/api/amigos', authenticateToken, amigoController);
 
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
