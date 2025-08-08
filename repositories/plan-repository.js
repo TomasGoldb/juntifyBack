@@ -37,7 +37,7 @@ export class PlanRepository {
     return data;
   }
 
-  async detallePlan(idPlan) {
+  async detallePlan(idPlan, currentUserId) {
     // 1. Traer el plan
     const { data: plan, error: planError } = await supabase
       .from('Planes')
@@ -51,15 +51,23 @@ export class PlanRepository {
       .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
       .eq('idPlan', idPlan);
     if (partError) throw new Error('Error al obtener participantes');
-    // 3. Armar la lista de participantes con datos útiles
+
+    // 3. Armar la lista de participantes con datos útiles y flags derivados
     const participantesList = participantes.map(row => ({
       id: row.idPerfil,
       nombre: row.perfiles?.nombre,
       username: row.perfiles?.username,
       avatarUrl: row.perfiles?.foto,
-      estadoParticipante: row.estadoParticipante
+      estadoParticipante: row.estadoParticipante,
+      aceptado: row.estadoParticipante === 1,
+      anfitrion: row.idPerfil === plan.idAnfitrion
     }));
-    return { ...plan, participantes: participantesList };
+
+    // 4. Determinar el estado del usuario actual dentro del plan
+    const miParticipacion = participantes.find(p => p.idPerfil === currentUserId);
+    const miEstadoParticipante = miParticipacion?.estadoParticipante ?? (currentUserId === plan.idAnfitrion ? 1 : null);
+
+    return { ...plan, participantes: participantesList, miEstadoParticipante };
   }
 
   async planesDeUsuario(userId, limit = 10, offset = 0) {

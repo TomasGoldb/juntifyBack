@@ -26,7 +26,8 @@ export class PlanService {
 
   async detallePlan(req, res) {
     try {
-      const detalle = await this.planRepository.detallePlan(req.params.idPlan);
+      const currentUserId = req.user?.userId;
+      const detalle = await this.planRepository.detallePlan(req.params.idPlan, currentUserId);
       if (!detalle) return res.status(404).json({ error: 'Plan no encontrado' });
       res.json(detalle);
     } catch (err) {
