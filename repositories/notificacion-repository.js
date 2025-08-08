@@ -23,7 +23,7 @@ export class NotificacionRepository {
   async listarNotificaciones(idPerfil) {
     const { data, error } = await supabase
       .from('Notificaciones')
-      .select('idNoti, textoNoti, idTipoNoti, idPerfil, leido')
+      .select('idNoti, textoNoti, idTipoNoti, idPerfil, idUsuario, idPlan, leido')
       .eq('idPerfil', idPerfil)
       .eq('leido', false)
       .order('idNoti', { ascending: false });
@@ -34,7 +34,7 @@ export class NotificacionRepository {
   async listarTodasNotificaciones(idPerfil) {
     const { data, error } = await supabase
       .from('Notificaciones')
-      .select('idNoti, textoNoti, idTipoNoti, idPerfil, leido')
+      .select('idNoti, textoNoti, idTipoNoti, idPerfil, idUsuario, idPlan, leido')
       .eq('idPerfil', idPerfil)
       .order('idNoti', { ascending: false });
     if (error) throw new Error(error.message);
