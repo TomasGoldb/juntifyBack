@@ -15,7 +15,12 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: true, // Permite todas las origenes
+  credentials: true, // Permite cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+}));
 
 app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify. La mayoría de los endpoints requieren autenticación con JWT.');
@@ -28,15 +33,41 @@ app.post('/api/users/registro', (req, res) => userService.registro(req, res));
 app.post('/api/users/login', (req, res) => userService.login(req, res));
 app.use('/api/blint', blintController);
 
-// Middleware global para proteger el resto de rutas
-app.use(authenticateToken);
+// Endpoint de prueba para verificar autenticación
+app.get('/api/test-auth', authenticateToken, (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Autenticación exitosa',
+    user: req.user 
+  });
+});
+
+// Endpoint de debug para ver qué headers están llegando
+app.get('/api/debug-headers', (req, res) => {
+  res.json({
+    headers: req.headers,
+    authorization: req.headers['authorization'],
+    xAuthToken: req.headers['x-auth-token'],
+    method: req.method,
+    url: req.url
+  });
+});
+
+// Endpoint de prueba simple para planes (sin autenticación temporalmente)
+app.get('/api/planes-test/:idPlan/detalle', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Endpoint de prueba funcionando',
+    idPlan: req.params.idPlan,
+    headers: req.headers
+  });
+});
 
 // Rutas protegidas
 app.use('/api/users', userController);
 app.use('/api/planes', planController);
 app.use('/api/notificaciones', notificacionController);
 app.use('/api/amigos', amigoController);
-app.use('/api/direcciones', direccionController);
 
 
 app.listen(PORT, () => {

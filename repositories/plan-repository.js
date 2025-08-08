@@ -31,13 +31,46 @@ export class PlanRepository {
     return planData;
   }
 
+  async iniciarPlan(idPlan, currentUserId) {
+    // 1) Traer datos mínimos del plan
+    const { data: plan, error: getError } = await supabase
+      .from('Planes')
+      .select('idPlan, idAnfitrion, estado, inicioPlan')
+      .eq('idPlan', idPlan)
+      .single();
+    if (getError || !plan) throw new Error('Plan no encontrado');
+
+    // 2) Validar permisos: solo el anfitrión puede iniciar
+    if (plan.idAnfitrion !== currentUserId) {
+      throw new Error('No autorizado para iniciar este plan');
+    }
+
+    // 3) Si ya está iniciado, devolver tal cual (2 = Empezado)
+    if (plan.estado === 2) {
+      return plan;
+    }
+
+    // 4) Marcar como iniciado (estado = 2) y fijar inicioPlan si no estaba
+    const { data: updated, error: updError } = await supabase
+      .from('Planes')
+      .update({
+        estado: 2,
+        inicioPlan: plan.inicioPlan ?? new Date().toISOString()
+      })
+      .eq('idPlan', idPlan)
+      .select()
+      .single();
+    if (updError) throw new Error(updError.message);
+    return updated;
+  }
+
   async obtenerPlan(idPlan) {
     const { data, error } = await supabase.from('Planes').select('*').eq('idPlan', idPlan).single();
     if (error) throw new Error(error.message);
     return data;
   }
 
-  async detallePlan(idPlan) {
+  async detallePlan(idPlan, currentUserId) {
     // 1. Traer el plan
     const { data: plan, error: planError } = await supabase
       .from('Planes')
@@ -51,15 +84,23 @@ export class PlanRepository {
       .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
       .eq('idPlan', idPlan);
     if (partError) throw new Error('Error al obtener participantes');
-    // 3. Armar la lista de participantes con datos útiles
+
+    // 3. Armar la lista de participantes con datos útiles y flags derivados
     const participantesList = participantes.map(row => ({
       id: row.idPerfil,
       nombre: row.perfiles?.nombre,
       username: row.perfiles?.username,
       avatarUrl: row.perfiles?.foto,
-      estadoParticipante: row.estadoParticipante
+      estadoParticipante: row.estadoParticipante,
+      aceptado: row.estadoParticipante === 1,
+      anfitrion: row.idPerfil === plan.idAnfitrion
     }));
-    return { ...plan, participantes: participantesList };
+
+    // 4. Determinar el estado del usuario actual dentro del plan
+    const miParticipacion = participantes.find(p => p.idPerfil === currentUserId);
+    const miEstadoParticipante = miParticipacion?.estadoParticipante ?? (currentUserId === plan.idAnfitrion ? 1 : null);
+
+    return { ...plan, participantes: participantesList, miEstadoParticipante };
   }
 
   async planesDeUsuario(userId, limit = 10, offset = 0) {
