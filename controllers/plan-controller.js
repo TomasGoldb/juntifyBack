@@ -7,6 +7,7 @@ const planService = new PlanService();
 router.post('/crear', (req, res) => planService.crearPlan(req, res));
 router.post('/aceptar-invitacion', (req, res) => planService.aceptarInvitacion(req, res));
 router.post('/declinar-invitacion', (req, res) => planService.declinarInvitacion(req, res));
+router.post('/:idPlan/iniciar', (req, res) => planService.iniciarPlan(req, res));
 
 router.get('/usuario/:userId', (req, res) => planService.planesDeUsuario(req, res));
 router.get('/usuario/:userId/mas', (req, res) => planService.cargarMasPlanes(req, res));

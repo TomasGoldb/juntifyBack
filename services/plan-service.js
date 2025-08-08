@@ -28,7 +28,8 @@ export class PlanService {
 
   async detallePlan(req, res) {
     try {
-      const detalle = await this.planRepository.detallePlan(req.params.idPlan);
+      const currentUserId = req.user?.userId;
+      const detalle = await this.planRepository.detallePlan(req.params.idPlan, currentUserId);
       if (!detalle) return res.status(404).json({ error: 'Plan no encontrado' });
       res.json(detalle);
     } catch (err) {
@@ -130,6 +131,18 @@ export class PlanService {
       res.json({ success: true, message: 'Invitación rechazada' });
     } catch (err) {
       res.status(500).json({ error: err.message || err });
+    }
+  }
+
+  async iniciarPlan(req, res) {
+    try {
+      const currentUserId = req.user?.userId;
+      const plan = await this.planRepository.iniciarPlan(req.params.idPlan, currentUserId);
+      res.json({ success: true, message: 'Plan iniciado', plan });
+    } catch (err) {
+      const message = err.message || err;
+      const status = message.includes('No autorizado') ? 403 : 400;
+      res.status(status).json({ error: message });
     }
   }
 
