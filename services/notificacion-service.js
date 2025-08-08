@@ -24,8 +24,8 @@ export class NotificacionService {
       return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
     }
     try {
-      await this.notificacionRepository.borrarNotificacion(idNoti, idPerfil);
-      res.json({ success: true, message: 'Notificación borrada' });
+      const updated = await this.notificacionRepository.borrarNotificacion(idNoti, idPerfil);
+      res.json({ success: true, message: 'Notificación marcada como leída', notificacion: updated });
     } catch (error) {
       res.status(500).json({ error: error.message || error });
     }

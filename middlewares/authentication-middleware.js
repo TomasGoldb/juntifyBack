@@ -10,7 +10,7 @@ export function authenticateToken(req, res, next) {
   console.log('Headers:', Object.keys(req.headers));
   console.log('Authorization header:', req.headers['authorization']);
   console.log('x-auth-token header:', req.headers['x-auth-token']);
-  console.log('==================');
+  console.log('==================');  
   
   // Verificar diferentes formas de enviar el token
   let token = null;

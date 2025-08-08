@@ -12,12 +12,16 @@ export class NotificacionRepository {
   }
 
   async borrarNotificacion(idNoti, idPerfil) {
-    const { error } = await supabase
+    // En lugar de borrar físicamente, marcamos como leída para preservar el historial
+    const { data, error } = await supabase
       .from('Notificaciones')
-      .delete()
+      .update({ leido: true })
       .eq('idNoti', idNoti)
-      .eq('idPerfil', idPerfil);
+      .eq('idPerfil', idPerfil)
+      .select()
+      .single();
     if (error) throw new Error(error.message);
+    return data;
   }
 
   async listarNotificaciones(idPerfil) {
