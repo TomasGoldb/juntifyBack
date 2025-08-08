@@ -4,7 +4,7 @@ export class NotificacionRepository {
   async agregarNotificacion({ idPerfil, textoNoti, idTipoNoti, idUsuario, idPlan }) {
     const { data, error } = await supabase
       .from('Notificaciones')
-      .insert([{ idPerfil, textoNoti, idTipoNoti, idUsuario, idPlan }])
+      .insert([{ idPerfil, textoNoti, idTipoNoti, idUsuario, idPlan, leido: false }])
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -65,19 +65,58 @@ export class NotificacionRepository {
 
   async marcarNotificacionPlanComoLeida(idPlan, idPerfil, leido = true) {
     try {
-      const { data, error } = await supabase
+      // Convertir a números si es necesario
+      const planId = parseInt(idPlan);
+      const perfilId = typeof idPerfil === 'string' ? idPerfil : idPerfil.toString();
+      
+      console.log(`=== DEBUG: marcarNotificacionPlanComoLeida ===`);
+      console.log(`Plan ID: ${planId} (${typeof planId})`);
+      console.log(`Perfil ID: ${perfilId} (${typeof perfilId})`);
+      console.log(`Leído: ${leido} (${typeof leido})`);
+      
+      // Buscar la notificación
+      const { data: notificaciones, error: searchError } = await supabase
         .from('Notificaciones')
-        .update({ leido })
-        .eq('idPlan', idPlan)
-        .eq('idPerfil', idPerfil)
-        .select();
+        .select('*')
+        .eq('idPlan', planId)
+        .eq('idPerfil', perfilId);
       
-      if (error) throw new Error(error.message);
+      if (searchError) {
+        console.log('Error al buscar notificación:', searchError.message);
+        throw new Error(searchError.message);
+      }
       
-      return data && data.length > 0 ? data[0] : null;
+      console.log(`Notificaciones encontradas: ${notificaciones ? notificaciones.length : 0}`);
+      
+      if (!notificaciones || notificaciones.length === 0) {
+        console.log('No se encontró notificación para actualizar');
+        return null;
+      }
+      
+      const notificacion = notificaciones[0];
+      console.log('Notificación actual:', notificacion);
+      console.log('Estado actual de leído:', notificacion.leido);
+      
+      // Actualizar la notificación usando el idNoti
+      const { data: updatedNotif, error: updateError } = await supabase
+        .from('Notificaciones')
+        .update({ leido: leido })
+        .eq('idNoti', notificacion.idNoti)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.log('Error al actualizar notificación:', updateError.message);
+        throw new Error(updateError.message);
+      }
+      
+      console.log('Notificación actualizada exitosamente:', updatedNotif);
+      console.log('Nuevo estado de leído:', updatedNotif.leido);
+      console.log(`=== FIN DEBUG ===`);
+      
+      return updatedNotif;
     } catch (error) {
-      // Si no encuentra la notificación, no es un error crítico
-      console.log(`No se encontró notificación para plan ${idPlan} y perfil ${idPerfil}:`, error.message);
+      console.log(`Error en marcarNotificacionPlanComoLeida:`, error.message);
       return null;
     }
   }
