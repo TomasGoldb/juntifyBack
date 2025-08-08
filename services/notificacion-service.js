@@ -44,6 +44,19 @@ export class NotificacionService {
     }
   }
 
+  async listarTodasNotificaciones(req, res) {
+    const { idPerfil } = req.params;
+    if (!idPerfil) {
+      return res.status(400).json({ error: 'Falta el parámetro idPerfil' });
+    }
+    try {
+      const notificaciones = await this.notificacionRepository.listarTodasNotificaciones(idPerfil);
+      res.json(notificaciones);
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
   async obtenerNotificacion(req, res) {
     const { idNoti } = req.params;
     if (!idNoti) {
@@ -52,6 +65,40 @@ export class NotificacionService {
     try {
       const notificacion = await this.notificacionRepository.obtenerNotificacion(idNoti);
       res.json(notificacion);
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async marcarComoLeida(req, res) {
+    const { idNoti, idPerfil, leido = true } = req.body;
+    if (!idNoti || !idPerfil) {
+      return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
+    }
+    try {
+      const notificacion = await this.notificacionRepository.marcarComoLeida(idNoti, idPerfil, leido);
+      res.json({ 
+        success: true, 
+        notificacion,
+        message: leido ? 'Notificación marcada como leída' : 'Notificación marcada como no leída'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async marcarNotificacionPlanComoLeida(req, res) {
+    const { idPlan, idPerfil, leido = true } = req.body;
+    if (!idPlan || !idPerfil) {
+      return res.status(400).json({ error: 'Faltan parámetros: idPlan, idPerfil' });
+    }
+    try {
+      const notificacion = await this.notificacionRepository.marcarNotificacionPlanComoLeida(idPlan, idPerfil, leido);
+      res.json({ 
+        success: true, 
+        notificacion,
+        message: leido ? 'Notificación de plan marcada como leída' : 'Notificación de plan marcada como no leída'
+      });
     } catch (error) {
       res.status(500).json({ error: error.message || error });
     }
