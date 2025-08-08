@@ -8,6 +8,7 @@ import planController from './controllers/plan-controller.js';
 import notificacionController from './controllers/notificacion-controller.js';
 import amigoController from './controllers/amigo-controller.js';
 import blintController from './controllers/blint-controller.js';
+import direccionController from './controllers/direccion-controller.js';
 import { authenticateToken } from './middlewares/authentication-middleware.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/users', userController);
 app.use('/api/planes', planController);
 app.use('/api/notificaciones', notificacionController);
 app.use('/api/amigos', amigoController);
+app.use('/api/direcciones', direccionController);
 
 
 app.listen(PORT, () => {

@@ -18,15 +18,14 @@ export class AmigoRepository {
   }
 
   async aceptarSolicitud(idSolicitador, idReceptor, fechaActual) {
-    console.log('aceptarSolicitud params:', { idSolicitador, idReceptor, fechaActual });
+    const fecha = fechaActual || new Date().toISOString(); // si viene vacío, quedará en UTC
     const { error } = await supabase
       .from('Amigos')
-      .update({ seAceptoSolicitud: true, fecha_amigo: fechaActual })
+      .update({ seAceptoSolicitud: true, fecha_amigo: fecha })
       .eq('idSolicitador', idSolicitador)
       .eq('idReceptor', idReceptor)
       .eq('seAceptoSolicitud', false);
     if (error) {
-      console.error('Supabase error:', error);
       throw new Error(error.message);
     }
   }
