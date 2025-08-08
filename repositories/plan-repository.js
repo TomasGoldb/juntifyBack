@@ -31,6 +31,39 @@ export class PlanRepository {
     return planData;
   }
 
+  async iniciarPlan(idPlan, currentUserId) {
+    // 1) Traer datos mínimos del plan
+    const { data: plan, error: getError } = await supabase
+      .from('Planes')
+      .select('idPlan, idAnfitrion, estado, inicioPlan')
+      .eq('idPlan', idPlan)
+      .single();
+    if (getError || !plan) throw new Error('Plan no encontrado');
+
+    // 2) Validar permisos: solo el anfitrión puede iniciar
+    if (plan.idAnfitrion !== currentUserId) {
+      throw new Error('No autorizado para iniciar este plan');
+    }
+
+    // 3) Si ya está iniciado, devolver tal cual (2 = Empezado)
+    if (plan.estado === 2) {
+      return plan;
+    }
+
+    // 4) Marcar como iniciado (estado = 2) y fijar inicioPlan si no estaba
+    const { data: updated, error: updError } = await supabase
+      .from('Planes')
+      .update({
+        estado: 2,
+        inicioPlan: plan.inicioPlan ?? new Date().toISOString()
+      })
+      .eq('idPlan', idPlan)
+      .select()
+      .single();
+    if (updError) throw new Error(updError.message);
+    return updated;
+  }
+
   async obtenerPlan(idPlan) {
     const { data, error } = await supabase.from('Planes').select('*').eq('idPlan', idPlan).single();
     if (error) throw new Error(error.message);

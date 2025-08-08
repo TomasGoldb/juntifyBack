@@ -134,6 +134,18 @@ export class PlanService {
     }
   }
 
+  async iniciarPlan(req, res) {
+    try {
+      const currentUserId = req.user?.userId;
+      const plan = await this.planRepository.iniciarPlan(req.params.idPlan, currentUserId);
+      res.json({ success: true, message: 'Plan iniciado', plan });
+    } catch (err) {
+      const message = err.message || err;
+      const status = message.includes('No autorizado') ? 403 : 400;
+      res.status(status).json({ error: message });
+    }
+  }
+
   async eliminarPlan(req, res) {
     try {
       await this.planRepository.eliminarPlan(req.params.idPlan);
