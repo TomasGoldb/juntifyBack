@@ -10,5 +10,6 @@ router.get('/:idPerfil', (req, res) => notificacionService.listarNotificaciones(
 router.get('/todas/:idPerfil', (req, res) => notificacionService.listarTodasNotificaciones(req, res));
 router.get('/noti/:idNoti', (req, res) => notificacionService.obtenerNotificacion(req, res));
 router.put('/marcar-leida', (req, res) => notificacionService.marcarComoLeida(req, res));
+router.put('/marcar-plan-leido', (req, res) => notificacionService.marcarNotificacionPlanComoLeida(req, res));
 
 export default router; 

@@ -27,29 +27,15 @@ export function authenticateToken(req, res, next) {
     token = req.body.token;
   }
 
-  // Debug logging
-  console.log('Auth Debug:', {
-    hasAuthHeader: !!authHeader,
-    authHeader: authHeader,
-    hasToken: !!token,
-    url: req.url,
-    method: req.method
-  });
-
   if (!token) {
     return res.status(401).json({ 
       error: 'Token no proporcionado',
-      message: 'Asegúrate de incluir el token en el header Authorization: Bearer <token>',
-      debug: {
-        hasAuthHeader: !!authHeader,
-        authHeader: authHeader ? 'presente' : 'ausente'
-      }
+      message: 'Asegúrate de incluir el token en el header Authorization: Bearer <token>'
     });
   }
 
   jwt.verify(token, SECRET_KEY, (err, user) => {
     if (err) {
-      console.log('JWT Error:', err.message);
       return res.status(403).json({ 
         error: 'Token inválido',
         message: err.message
