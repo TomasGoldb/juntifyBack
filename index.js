@@ -14,7 +14,12 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: true, // Permite todas las origenes
+  credentials: true, // Permite cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+}));
 
 app.get('/', (req, res) => {
   res.json('Bienvenido a la API de Juntify. La mayoría de los endpoints requieren autenticación con JWT.');
@@ -33,6 +38,27 @@ app.get('/api/test-auth', authenticateToken, (req, res) => {
     success: true, 
     message: 'Autenticación exitosa',
     user: req.user 
+  });
+});
+
+// Endpoint de debug para ver qué headers están llegando
+app.get('/api/debug-headers', (req, res) => {
+  res.json({
+    headers: req.headers,
+    authorization: req.headers['authorization'],
+    xAuthToken: req.headers['x-auth-token'],
+    method: req.method,
+    url: req.url
+  });
+});
+
+// Endpoint de prueba simple para planes (sin autenticación temporalmente)
+app.get('/api/planes-test/:idPlan/detalle', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Endpoint de prueba funcionando',
+    idPlan: req.params.idPlan,
+    headers: req.headers
   });
 });
 
