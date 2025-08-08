@@ -28,12 +28,17 @@ export class PlanService {
 
   async detallePlan(req, res) {
     try {
-      const currentUserId = req.user?.userId;
-      const detalle = await this.planRepository.detallePlan(req.params.idPlan, currentUserId);
+      const idPlanParam = req.params.idPlan;
+      const parsed = parseInt(idPlanParam);
+      const idPlan = Number.isNaN(parsed) ? idPlanParam : parsed;
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      console.log('[detallePlan] idPlanParam=', idPlanParam, 'parsed=', idPlan, 'currentUserId=', currentUserId);
+      const detalle = await this.planRepository.detallePlan(idPlan, currentUserId);
       if (!detalle) return res.status(404).json({ error: 'Plan no encontrado' });
       res.json(detalle);
     } catch (err) {
-      res.status(500).json({ error: err.message || err });
+      console.error('[detallePlan] Error:', err);
+      res.status(500).json({ error: err.message || 'No se pudo cargar el plan' });
     }
   }
 
