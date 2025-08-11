@@ -5,7 +5,6 @@ export class AmigoService {
     this.amigoRepository = new AmigoRepository();
   }
 
-  // Genera fecha y hora actual en la zona horaria de Argentina en formato ISO con offset -03:00
   getArgentinaIsoNow() {
     const now = new Date();
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -39,6 +38,7 @@ export class AmigoService {
   async aceptarSolicitud(req, res) {
     const { idSolicitador, idReceptor } = req.body;
     const fechaActual = this.getArgentinaIsoNow();
+    console.log(fechaActual);
     try {
       await this.amigoRepository.aceptarSolicitud(idSolicitador, idReceptor, fechaActual);
       res.json({ success: true, message: 'Solicitud aceptada' });
