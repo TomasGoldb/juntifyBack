@@ -81,4 +81,14 @@ export class AmigoRepository {
     if (error) throw new Error(error.message);
     return data.map(row => row.perfiles);
   }
+
+  async solicitudesEnviadas(userId) {
+    const { data, error } = await supabase
+      .from('Amigos')
+      .select('idReceptor, perfiles: idReceptor (id, username, nombre, apellido, push_token)')
+      .eq('idSolicitador', userId)
+      .eq('seAceptoSolicitud', false);
+    if (error) throw new Error(error.message);
+    return (data || []).map(row => row.perfiles);
+  }
 } 

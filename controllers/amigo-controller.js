@@ -10,5 +10,6 @@ router.post('/rechazar', (req, res) => amigoService.rechazarSolicitud(req, res))
 router.post('/eliminar', (req, res) => amigoService.eliminarAmigo(req, res));
 router.get('/buscar/:userId/:query', (req, res) => amigoService.buscarUsuarios(req, res));
 router.get('/pendientes/:userId', (req, res) => amigoService.solicitudesPendientes(req, res));
+router.get('/enviadas/:userId', (req, res) => amigoService.solicitudesEnviadas(req, res));
 
 export default router; 
