@@ -6,12 +6,12 @@ export class DireccionService {
   }
 
   async crear(req, res) {
-    const { idLugar } = req.body;
+    const { idLugar, alias } = req.body;
     const idUsuario = req.user?.userId;
     if (!idUsuario) return res.status(401).json({ error: 'Usuario no autenticado' });
     if (!idLugar) return res.status(400).json({ error: 'idLugar es requerido' });
     try {
-      const direccion = await this.direccionRepository.crearDireccion(idLugar, idUsuario);
+      const direccion = await this.direccionRepository.crearDireccion(idLugar, idUsuario, alias);
       res.json({ success: true, direccion });
     } catch (error) {
       res.status(500).json({ error: error.message || error });

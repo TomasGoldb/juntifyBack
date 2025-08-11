@@ -1,10 +1,10 @@
 import { supabase } from '../configs/db-config.js';
 
 export class DireccionRepository {
-  async crearDireccion(idLugar, idUsuario) {
+  async crearDireccion(idLugar, idUsuario, alias = null) {
     const { data, error } = await supabase
       .from('Direcciones')
-      .insert([{ idLugar, idUsuario }])
+      .insert([{ idLugar, idUsuario, alias }])
       .select()
       .single();
     if (error) throw new Error(error.message);
