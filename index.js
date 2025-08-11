@@ -68,6 +68,10 @@ app.use('/api/users', userController);
 app.use('/api/planes', planController);
 app.use('/api/notificaciones', notificacionController);
 app.use('/api/amigos', amigoController);
+// Direcciones (protegidas con autenticación)
+app.use('/api/direcciones', authenticateToken, direccionController);
+// Alias singular para compatibilidad
+app.use('/api/direccion', authenticateToken, direccionController);
 
 
 app.listen(PORT, () => {
