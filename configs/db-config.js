@@ -6,4 +6,9 @@ dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-export const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('[DB] Variables de entorno faltantes para Supabase. Verifica SUPABASE_URL y SUPABASE_KEY');
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
