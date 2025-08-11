@@ -38,7 +38,6 @@ export class AmigoService {
   async aceptarSolicitud(req, res) {
     const { idSolicitador, idReceptor } = req.body;
     const fechaActual = this.getArgentinaIsoNow();
-    console.log(fechaActual);
     try {
       await this.amigoRepository.aceptarSolicitud(idSolicitador, idReceptor, fechaActual);
       res.json({ success: true, message: 'Solicitud aceptada' });
@@ -82,6 +81,16 @@ export class AmigoService {
     try {
       const pendientes = await this.amigoRepository.solicitudesPendientes(userId);
       res.json(pendientes);
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async solicitudesEnviadas(req, res) {
+    const { userId } = req.params;
+    try {
+      const enviadas = await this.amigoRepository.solicitudesEnviadas(userId);
+      res.json(enviadas);
     } catch (error) {
       res.status(500).json({ error: error.message || error });
     }
