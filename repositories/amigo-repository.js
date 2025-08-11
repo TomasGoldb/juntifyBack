@@ -18,7 +18,7 @@ export class AmigoRepository {
   }
 
   async aceptarSolicitud(idSolicitador, idReceptor, fechaActual) {
-    const fecha = fechaActual || new Date().toISOString(); // si viene vacío, quedará en UTC
+    const fecha = fechaActual || new Date().toISOString(); 
     const { error } = await supabase
       .from('Amigos')
       .update({ seAceptoSolicitud: true, fecha_amigo: fecha })
