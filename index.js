@@ -9,6 +9,7 @@ import notificacionController from './controllers/notificacion-controller.js';
 import amigoController from './controllers/amigo-controller.js';
 import blintController from './controllers/blint-controller.js';
 import direccionController from './controllers/direccion-controller.js';
+import ubicacionController from './controllers/ubicacion-controller.js';
 import { authenticateToken } from './middlewares/authentication-middleware.js';
 
 const app = express();
@@ -72,6 +73,8 @@ app.use('/api/amigos', amigoController);
 app.use('/api/direcciones', authenticateToken, direccionController);
 // Alias singular para compatibilidad
 app.use('/api/direccion', authenticateToken, direccionController);
+// Ubicación en tiempo real
+app.use('/api', ubicacionController);
 
 
 app.listen(PORT, () => {
