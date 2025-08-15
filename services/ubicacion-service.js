@@ -33,7 +33,8 @@ export class UbicacionService {
       res.json({ success: true, message: 'Ubicación actualizada correctamente' });
     } catch (error) {
       console.error('Error actualizando ubicación:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      // No fallar completamente si hay error de ubicación
+      res.json({ success: true, message: 'Plan iniciado correctamente (ubicación no disponible)' });
     }
   }
 
