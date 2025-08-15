@@ -1,5 +1,6 @@
 import { UserRepository } from '../repositories/user-repository.js';
 import { transporter } from '../configs/mailer-config.js';
+import { supabase } from '../configs/db-config.js';
 import jwt from 'jsonwebtoken';
 
 const SECRET_KEY = process.env.JWT_SECRET;
@@ -50,6 +51,53 @@ export class UserService {
     try {
       const amigos = await this.userRepository.obtenerAmigos(userId);
       res.json(amigos);
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async logout(req, res) {
+    try {
+      // En JWT, el logout se maneja en el cliente eliminando el token
+      // Este endpoint puede usarse para invalidar tokens si es necesario
+      res.json({ 
+        success: true, 
+        message: 'Logout exitoso',
+        note: 'Elimina el token del almacenamiento local'
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async refreshToken(req, res) {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email requerido' });
+      }
+      
+      // Buscar el usuario por email
+      const { data: user, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      
+      if (userError || !user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      
+      const userId = user.user.id;
+      const perfil = await this.userRepository.obtenerPerfilPorId(userId);
+      
+      // Generar nuevo token JWT con la estructura correcta
+      const token = jwt.sign({ userId, id: userId, email }, SECRET_KEY, { expiresIn: '30d' });
+      
+      res.json({
+        success: true,
+        message: 'Token actualizado',
+        user: user.user,
+        perfil,
+        token
+      });
     } catch (error) {
       res.status(500).json({ error: error.message || error });
     }

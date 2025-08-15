@@ -42,6 +42,8 @@ import { UserService } from './services/user-service.js';
 const userService = new UserService();
 app.post('/api/users/registro', (req, res) => userService.registro(req, res));
 app.post('/api/users/login', (req, res) => userService.login(req, res));
+app.post('/api/users/logout', (req, res) => userService.logout(req, res));
+app.post('/api/users/refresh-token', (req, res) => userService.refreshToken(req, res));
 app.use('/api/blint', blintController);
 
 // Endpoint de prueba para verificar autenticación
@@ -52,7 +54,14 @@ app.get('/api/test-auth', authenticateToken, (req, res) => {
     user: req.user,
     userId: req.user?.userId,
     id: req.user?.id,
-    idPerfil: req.user?.idPerfil
+    idPerfil: req.user?.idPerfil,
+    allFields: Object.keys(req.user || {}),
+    tokenInfo: {
+      hasUserId: !!req.user?.userId,
+      hasId: !!req.user?.id,
+      hasIdPerfil: !!req.user?.idPerfil,
+      hasEmail: !!req.user?.email
+    }
   });
 });
 

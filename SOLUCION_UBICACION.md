@@ -15,8 +15,10 @@ La función `actualizar_ubicacion_participante` y la tabla `UbicacionParticipant
 
 1. Ve a tu panel de Supabase
 2. Abre el SQL Editor
-3. Copia y pega el contenido del archivo `database/crear_ubicacion_tracking.sql`
+3. Copia y pega el contenido del archivo `database/crear_ubicacion_tracking_final.sql`
 4. Ejecuta el script
+
+**Nota:** Este script maneja correctamente las políticas de PostgreSQL y evita errores de sintaxis.
 
 ### Opción 2: Solución Temporal (Ya implementada)
 

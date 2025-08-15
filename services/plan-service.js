@@ -1,5 +1,6 @@
 import { PlanRepository } from '../repositories/plan-repository.js';
 import { NotificacionRepository } from '../repositories/notificacion-repository.js';
+import { supabase } from '../configs/db-config.js';
 
 export class PlanService {
   constructor() {
@@ -145,13 +146,48 @@ export class PlanService {
       console.log('[iniciarPlan] req.user.userId:', req.user?.userId);
       console.log('[iniciarPlan] req.user.id:', req.user?.id);
       console.log('[iniciarPlan] req.user.idPerfil:', req.user?.idPerfil);
+      console.log('[iniciarPlan] req.user.email:', req.user?.email);
+      console.log('[iniciarPlan] Todos los campos de req.user:', Object.keys(req.user || {}));
       
-      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      // Intentar obtener el userId de diferentes campos
+      let currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      
+      // Si no encontramos userId, intentar obtenerlo del email
+      if (!currentUserId && req.user?.email) {
+        console.log('[iniciarPlan] Intentando obtener userId del email:', req.user.email);
+        try {
+          // Buscar el perfil por email
+          const { data: perfil, error } = await supabase
+            .from('perfiles')
+            .select('id')
+            .eq('email', req.user.email)
+            .single();
+          
+          if (!error && perfil) {
+            currentUserId = perfil.id;
+            console.log('[iniciarPlan] userId obtenido del email:', currentUserId);
+          }
+        } catch (emailError) {
+          console.log('[iniciarPlan] Error obteniendo userId del email:', emailError);
+        }
+      }
+      
       console.log('[iniciarPlan] currentUserId final:', currentUserId, 'tipo:', typeof currentUserId);
       
       if (!currentUserId) {
         console.log('[iniciarPlan] ERROR: currentUserId es null o undefined');
-        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+        console.log('[iniciarPlan] req.user disponible:', req.user);
+        console.log('[iniciarPlan] Campos disponibles:', Object.keys(req.user || {}));
+        return res.status(403).json({ 
+          error: 'No se pudo identificar al usuario',
+          debug: {
+            user: req.user,
+            availableFields: Object.keys(req.user || {}),
+            userId: req.user?.userId,
+            id: req.user?.id,
+            idPerfil: req.user?.idPerfil
+          }
+        });
       }
       
       const plan = await this.planRepository.iniciarPlan(req.params.idPlan, currentUserId);

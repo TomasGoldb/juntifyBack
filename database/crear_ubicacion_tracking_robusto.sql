@@ -1,5 +1,5 @@
--- Script para crear la tabla y función de tracking de ubicación
--- Ejecuta este script en tu base de datos de Supabase
+-- Script robusto para crear la tabla y función de tracking de ubicación
+-- Esta versión maneja mejor los errores de duplicación
 
 -- Tabla para almacenar las ubicaciones en tiempo real de los participantes
 CREATE TABLE IF NOT EXISTS "UbicacionParticipante" (
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS "UbicacionParticipante" (
   UNIQUE("idPlan", "idPerfil")
 );
 
--- Índices para mejorar el rendimiento
+-- Índices para mejorar el rendimiento (ya tienen IF NOT EXISTS)
 CREATE INDEX IF NOT EXISTS idx_ubicacion_plan ON "UbicacionParticipante"("idPlan");
 CREATE INDEX IF NOT EXISTS idx_ubicacion_perfil ON "UbicacionParticipante"("idPerfil");
 CREATE INDEX IF NOT EXISTS idx_ubicacion_timestamp ON "UbicacionParticipante"(timestamp);
@@ -41,24 +41,27 @@ $$ LANGUAGE plpgsql;
 -- Habilitar RLS en la tabla
 ALTER TABLE "UbicacionParticipante" ENABLE ROW LEVEL SECURITY;
 
--- Política básica para permitir que los usuarios autenticados vean las ubicaciones
-CREATE POLICY IF NOT EXISTS "Usuarios autenticados pueden ver ubicaciones" ON "UbicacionParticipante"
+-- Eliminar políticas existentes si existen (para evitar conflictos)
+DROP POLICY IF EXISTS "Usuarios autenticados pueden ver ubicaciones" ON "UbicacionParticipante";
+DROP POLICY IF EXISTS "Usuarios pueden actualizar su ubicación" ON "UbicacionParticipante";
+DROP POLICY IF EXISTS "Usuarios pueden insertar su ubicación" ON "UbicacionParticipante";
+DROP POLICY IF EXISTS "Usuarios pueden eliminar su ubicación" ON "UbicacionParticipante";
+
+-- Crear políticas
+CREATE POLICY "Usuarios autenticados pueden ver ubicaciones" ON "UbicacionParticipante"
   FOR SELECT USING (auth.role() = 'authenticated');
 
--- Política para permitir que los usuarios actualicen su propia ubicación
-CREATE POLICY IF NOT EXISTS "Usuarios pueden actualizar su ubicación" ON "UbicacionParticipante"
+CREATE POLICY "Usuarios pueden actualizar su ubicación" ON "UbicacionParticipante"
   FOR UPDATE USING (auth.uid()::text = "idPerfil"::text);
 
--- Política para permitir que los usuarios inserten su ubicación
-CREATE POLICY IF NOT EXISTS "Usuarios pueden insertar su ubicación" ON "UbicacionParticipante"
+CREATE POLICY "Usuarios pueden insertar su ubicación" ON "UbicacionParticipante"
   FOR INSERT WITH CHECK (auth.uid()::text = "idPerfil"::text);
 
--- Política para permitir que los usuarios eliminen su ubicación
-CREATE POLICY IF NOT EXISTS "Usuarios pueden eliminar su ubicación" ON "UbicacionParticipante"
+CREATE POLICY "Usuarios pueden eliminar su ubicación" ON "UbicacionParticipante"
   FOR DELETE USING (auth.uid()::text = "idPerfil"::text);
 
 -- Dar permisos de ejecución a la función
 GRANT EXECUTE ON FUNCTION actualizar_ubicacion_participante TO authenticated;
 
 -- Comentario de confirmación
-SELECT 'Tabla UbicacionParticipante y función actualizar_ubicacion_participante creadas exitosamente' as mensaje; 
+SELECT 'Tabla UbicacionParticipante y función actualizar_ubicacion_participante creadas/actualizadas exitosamente' as mensaje; 
