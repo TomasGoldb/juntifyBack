@@ -71,8 +71,12 @@ export function authenticateToken(req, res, next) {
         message: err.message
       });
     }
-    console.log('Token válido, usuario:', user);
-    req.user = user;
-    next();
+      console.log('Token válido, usuario:', user);
+  console.log('Campos del token:', Object.keys(user));
+  console.log('userId:', user.userId);
+  console.log('id:', user.id);
+  console.log('email:', user.email);
+  req.user = user;
+  next();
   });
 }

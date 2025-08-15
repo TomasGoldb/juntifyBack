@@ -141,12 +141,25 @@ export class PlanService {
 
   async iniciarPlan(req, res) {
     try {
-      const currentUserId = req.user?.userId;
+      console.log('[iniciarPlan] req.user completo:', req.user);
+      console.log('[iniciarPlan] req.user.userId:', req.user?.userId);
+      console.log('[iniciarPlan] req.user.id:', req.user?.id);
+      console.log('[iniciarPlan] req.user.idPerfil:', req.user?.idPerfil);
+      
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      console.log('[iniciarPlan] currentUserId final:', currentUserId, 'tipo:', typeof currentUserId);
+      
+      if (!currentUserId) {
+        console.log('[iniciarPlan] ERROR: currentUserId es null o undefined');
+        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+      }
+      
       const plan = await this.planRepository.iniciarPlan(req.params.idPlan, currentUserId);
       res.json({ success: true, message: 'Plan iniciado', plan });
     } catch (err) {
       const message = err.message || err;
       const status = message.includes('No autorizado') ? 403 : 400;
+      console.log('[iniciarPlan] Error:', message, 'Status:', status);
       res.status(status).json({ error: message });
     }
   }

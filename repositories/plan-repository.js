@@ -32,6 +32,8 @@ export class PlanRepository {
   }
 
   async iniciarPlan(idPlan, currentUserId) {
+    console.log('[iniciarPlan] idPlan:', idPlan, 'currentUserId:', currentUserId, 'type currentUserId:', typeof currentUserId);
+    
     // 1) Traer datos mínimos del plan
     const { data: plan, error: getError } = await supabase
       .from('Planes')
@@ -40,8 +42,21 @@ export class PlanRepository {
       .single();
     if (getError || !plan) throw new Error('Plan no encontrado');
 
+    console.log('[iniciarPlan] plan completo:', plan);
+    console.log('[iniciarPlan] plan.idAnfitrion:', plan.idAnfitrion, 'type plan.idAnfitrion:', typeof plan.idAnfitrion);
+
     // 2) Validar permisos: solo el anfitrión puede iniciar
-    if (plan.idAnfitrion !== currentUserId) {
+    // Convertir ambos a string para comparación segura
+    const anfitrionStr = String(plan.idAnfitrion);
+    const currentUserStr = String(currentUserId);
+    
+    console.log('[iniciarPlan] Comparación:');
+    console.log('  - anfitrionStr:', anfitrionStr, '(tipo:', typeof anfitrionStr, ')');
+    console.log('  - currentUserStr:', currentUserStr, '(tipo:', typeof currentUserStr, ')');
+    console.log('  - Son iguales?', anfitrionStr === currentUserStr);
+    
+    if (anfitrionStr !== currentUserStr) {
+      console.log('[iniciarPlan] No autorizado - anfitrionStr:', anfitrionStr, 'currentUserStr:', currentUserStr);
       throw new Error('No autorizado para iniciar este plan');
     }
 
