@@ -128,7 +128,7 @@ export class PlanRepository {
     if (partError) throw new Error(partError.message);
     const idPlanesParticipa = participaciones.map(p => p.idPlan);
     
-    // 2. Buscar todos los planes donde es anfitrión o participante (estadoParticipante = 2)
+    // 2. Buscar todos los planes donde es anfitrión o participante
     let filters = [`idAnfitrion.eq.${userId}`];
     if (idPlanesParticipa.length > 0) {
       filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
@@ -141,37 +141,43 @@ export class PlanRepository {
       .or(filters.join(','));
     if (countError) throw new Error(countError.message);
     
-    // 4. Obtener los planes con paginación
+    // 4. Obtener los planes con participantes y perfiles en una sola consulta
     const { data: planes, error: planesError } = await supabase
       .from('Planes')
-      .select('*')
+      .select(`
+        idPlan, nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, estado, fechaCreacion,
+        participantes:ParticipantePlan (
+          idPerfil,
+          estadoParticipante,
+          perfil:perfiles (
+            id, nombre, username, foto
+          )
+        )
+      `)
       .or(filters.join(','))
       .order('fechaCreacion', { ascending: false })
       .range(offset, offset + limit - 1);
     if (planesError) throw new Error(planesError.message);
     
-    // 5. Para cada plan, obtener los participantes
-    const planesConParticipantes = await Promise.all(
-      planes.map(async (plan) => {
-        const { data: participantes, error: partError } = await supabase
-          .from('ParticipantePlan')
-          .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
-          .eq('idPlan', plan.idPlan);
-        
-        if (partError) throw new Error('Error al obtener participantes');
-        
-        // Armar la lista de participantes con datos útiles
-        const participantesList = participantes.map(row => ({
-          id: row.idPerfil,
-          nombre: row.perfiles?.nombre,
-          username: row.perfiles?.username,
-          avatarUrl: row.perfiles?.foto,
-          estadoParticipante: row.estadoParticipante
-        }));
-        
-        return { ...plan, participantes: participantesList };
-      })
-    );
+    // 5. Mapear los datos para el frontend
+    const planesConParticipantes = planes.map(plan => ({
+      idPlan: plan.idPlan,
+      nombrePlan: plan.nombrePlan,
+      descPlan: plan.descPlan,
+      idLugar: plan.idLugar,
+      inicioPlan: plan.inicioPlan,
+      finPlan: plan.finPlan,
+      idAnfitrion: plan.idAnfitrion,
+      estado: plan.estado,
+      fechaCreacion: plan.fechaCreacion,
+      participantes: (plan.participantes || []).map(p => ({
+        id: p.idPerfil,
+        nombre: p.perfil?.nombre,
+        username: p.perfil?.username,
+        avatarUrl: p.perfil?.foto,
+        estadoParticipante: p.estadoParticipante
+      }))
+    }));
     
     return {
       planes: planesConParticipantes,
