@@ -19,9 +19,9 @@ export class NotificacionService {
   }
 
   async borrarNotificacion(req, res) {
-    const { idNoti, idPerfil } = req.body;
-    if (!idNoti || !idPerfil) {
-      return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
+    const { idNoti, idPerfil = null } = req.body;
+    if (!idNoti) {
+      return res.status(400).json({ error: 'Faltan parámetros: idNoti' });
     }
     try {
       const updated = await this.notificacionRepository.borrarNotificacion(idNoti, idPerfil);
@@ -46,11 +46,13 @@ export class NotificacionService {
 
   async listarTodasNotificaciones(req, res) {
     const { idPerfil } = req.params;
+    const { includeRead } = req.query;
     if (!idPerfil) {
       return res.status(400).json({ error: 'Falta el parámetro idPerfil' });
     }
     try {
-      const notificaciones = await this.notificacionRepository.listarTodasNotificaciones(idPerfil);
+      const includeReadBool = String(includeRead).toLowerCase() === 'true';
+      const notificaciones = await this.notificacionRepository.listarTodasNotificaciones(idPerfil, includeReadBool);
       res.json(notificaciones);
     } catch (error) {
       res.status(500).json({ error: error.message || error });

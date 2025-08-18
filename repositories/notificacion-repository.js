@@ -13,13 +13,17 @@ export class NotificacionRepository {
 
   async borrarNotificacion(idNoti, idPerfil) {
     // En lugar de borrar físicamente, marcamos como leída para preservar el historial
-    const { data, error } = await supabase
+    // Si no viene idPerfil, actualizamos solo por idNoti (compatibilidad con front)
+    let query = supabase
       .from('Notificaciones')
       .update({ leido: true })
-      .eq('idNoti', idNoti)
-      .eq('idPerfil', idPerfil)
-      .select()
-      .single();
+      .eq('idNoti', idNoti);
+
+    if (idPerfil) {
+      query = query.eq('idPerfil', idPerfil);
+    }
+
+    const { data, error } = await query.select().single();
     if (error) throw new Error(error.message);
     return data;
   }
@@ -35,12 +39,18 @@ export class NotificacionRepository {
     return data;
   }
 
-  async listarTodasNotificaciones(idPerfil) {
-    const { data, error } = await supabase
+  async listarTodasNotificaciones(idPerfil, includeRead = false) {
+    let query = supabase
       .from('Notificaciones')
       .select('idNoti, textoNoti, idTipoNoti, idPerfil, idUsuario, idPlan, leido')
       .eq('idPerfil', idPerfil)
       .order('idNoti', { ascending: false });
+
+    if (!includeRead) {
+      query = query.eq('leido', false);
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
   }
