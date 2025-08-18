@@ -11,21 +11,53 @@ export class NotificacionRepository {
     return data;
   }
 
-  async borrarNotificacion(idNoti, idPerfil) {
+  async borrarNotificacion(idNoti, idPerfil, idPlan = null) {
     // En lugar de borrar físicamente, marcamos como leída para preservar el historial
-    // Si no viene idPerfil, actualizamos solo por idNoti (compatibilidad con front)
-    let query = supabase
-      .from('Notificaciones')
-      .update({ leido: true })
-      .eq('idNoti', idNoti);
+    // Soporta dos formas:
+    // - Por idNoti (opcionalmente filtrando por idPerfil)
+    // - Por idPlan + idPerfil (para rechazar plan sin conocer idNoti)
 
-    if (idPerfil) {
-      query = query.eq('idPerfil', idPerfil);
+    if (idNoti) {
+      let query = supabase
+        .from('Notificaciones')
+        .update({ leido: true })
+        .eq('idNoti', idNoti);
+
+      if (idPerfil) {
+        query = query.eq('idPerfil', idPerfil);
+      }
+
+      const { data, error } = await query.select().single();
+      if (error) throw new Error(error.message);
+      return data;
     }
 
-    const { data, error } = await query.select().single();
-    if (error) throw new Error(error.message);
-    return data;
+    if (idPlan && idPerfil) {
+      // Buscar notificación por plan + perfil y actualizar por idNoti encontrado
+      const { data: notificaciones, error: searchError } = await supabase
+        .from('Notificaciones')
+        .select('idNoti')
+        .eq('idPlan', parseInt(idPlan))
+        .eq('idPerfil', String(idPerfil))
+        .limit(1);
+
+      if (searchError) throw new Error(searchError.message);
+      if (!notificaciones || notificaciones.length === 0) return null;
+
+      const foundIdNoti = notificaciones[0].idNoti;
+
+      const { data, error } = await supabase
+        .from('Notificaciones')
+        .update({ leido: true })
+        .eq('idNoti', foundIdNoti)
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    throw new Error('Parámetros insuficientes: provea idNoti o (idPlan e idPerfil)');
   }
 
   async listarNotificaciones(idPerfil) {

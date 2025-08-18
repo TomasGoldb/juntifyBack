@@ -95,9 +95,9 @@ export class PlanService {
       // 1. Aceptar la invitación
       await this.planRepository.aceptarInvitacion(idPlan, idPerfil);
       
-      // 2. Marcar la notificación como leída
+      // 2. Marcar la notificación como leída usando la misma función de borrar
       try {
-        const notificacion = await this.notificacionRepository.marcarNotificacionPlanComoLeida(idPlan, idPerfil, true);
+        const notificacion = await this.notificacionRepository.borrarNotificacion(null, idPerfil, idPlan);
         if (notificacion) {
           console.log(`Notificación marcada como leída para plan ${idPlan} y perfil ${idPerfil}`);
         } else {
@@ -121,9 +121,9 @@ export class PlanService {
       // 1. Rechazar la invitación
       await this.planRepository.declinarInvitacion(idPlan, idPerfil);
       
-      // 2. Marcar la notificación como leída
+      // 2. Marcar la notificación como leída usando la misma función de borrar
       try {
-        const notificacion = await this.notificacionRepository.marcarNotificacionPlanComoLeida(idPlan, idPerfil, true);
+        const notificacion = await this.notificacionRepository.borrarNotificacion(null, idPerfil, idPlan);
         if (notificacion) {
           console.log(`Notificación marcada como leída para plan ${idPlan} y perfil ${idPerfil}`);
         } else {
