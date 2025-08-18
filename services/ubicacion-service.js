@@ -1,5 +1,6 @@
 import { UbicacionRepository } from '../repositories/ubicacion-repository.js';
 import { supabase } from '../configs/db-config.js';
+import { getIO } from '../configs/socket.js';
 
 export class UbicacionService {
   constructor() {
@@ -29,7 +30,20 @@ export class UbicacionService {
       }
 
       await this.ubicacionRepository.actualizarUbicacion(idPlan, currentUserId, latitude, longitude, bateria);
-      
+
+      // Emitir actualización en tiempo real a la sala del plan
+      const io = getIO();
+      if (io) {
+        io.to(`plan-${idPlan}`).emit('ubicacion-actualizada', {
+          idPlan: Number(idPlan),
+          participante: {
+            id: currentUserId,
+            ubicacion: { latitude, longitude, timestamp: new Date().toISOString() },
+            bateria
+          }
+        });
+      }
+
       res.json({ success: true, message: 'Ubicación actualizada correctamente' });
     } catch (error) {
       console.error('Error actualizando ubicación:', error);

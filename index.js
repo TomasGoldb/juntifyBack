@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { supabase } from './configs/db-config.js';
@@ -14,6 +15,7 @@ import ubicacionController from './controllers/ubicacion-controller.js';
 import { authenticateToken } from './middlewares/authentication-middleware.js';
 
 const app = express();
+const server = http.createServer(app);
 const PORT = 3000;
 
 app.use(express.json());
@@ -206,6 +208,9 @@ app.use('/api/direccion', authenticateToken, direccionController);
 app.use('/api', ubicacionController);
 
 
-app.listen(PORT, () => {
+import { initSocket } from './configs/socket.js';
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
