@@ -254,4 +254,126 @@ export class PlanRepository {
       .eq('idPlan', idPlan);
     if (planError) throw new Error('Error al eliminar el plan');
   }
+
+  async cambiarEstadoPlan(idPlan, currentUserId, nuevoEstado) {
+    // 1) Traer datos mínimos del plan
+    const { data: plan, error: getError } = await supabase
+      .from('Planes')
+      .select('idPlan, idAnfitrion, estado')
+      .eq('idPlan', idPlan)
+      .single();
+    if (getError || !plan) throw new Error('Plan no encontrado');
+    // 2) Validar permisos: solo el anfitrión puede cambiar el estado
+    if (String(plan.idAnfitrion) !== String(currentUserId)) {
+      throw new Error('No autorizado para cambiar el estado de este plan');
+    }
+    // 3) Actualizar el estado
+    const { data: updated, error: updError } = await supabase
+      .from('Planes')
+      .update({ estado: nuevoEstado })
+      .eq('idPlan', idPlan)
+      .select()
+      .single();
+    if (updError) throw new Error(updError.message);
+    return updated;
+  }
+
+  async votarLugar(idPlan, idPerfil, idLugar) {
+    // Inserta o actualiza el voto del usuario para el plan
+    // Si ya existe, actualiza el idLugar
+    const { data, error } = await supabase
+      .from('VotosLugar')
+      .upsert({ idPlan, idPerfil, idLugar, fechaVoto: new Date().toISOString() }, { onConflict: ['idPlan', 'idPerfil'] })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async estadoVotacion(idPlan) {
+    // 1. Obtener todos los votos para el plan
+    const { data: votos, error: votosError } = await supabase
+      .from('VotosLugar')
+      .select('idPerfil, idLugar')
+      .eq('idPlan', idPlan);
+    if (votosError) throw new Error(votosError.message);
+    // 2. Contar votos por lugar
+    const conteo = {};
+    votos.forEach(v => {
+      conteo[v.idLugar] = (conteo[v.idLugar] || 0) + 1;
+    });
+    // 3. Obtener participantes del plan
+    const { data: participantes, error: partError } = await supabase
+      .from('ParticipantePlan')
+      .select('idPerfil, perfiles: idPerfil (nombre, username, foto)')
+      .eq('idPlan', idPlan);
+    if (partError) throw new Error(partError.message);
+    // 4. Quién votó y quién no
+    const idsQueVotaron = new Set(votos.map(v => v.idPerfil));
+    const listaParticipantes = participantes.map(p => ({
+      idPerfil: p.idPerfil,
+      nombre: p.perfiles?.nombre,
+      username: p.perfiles?.username,
+      foto: p.perfiles?.foto,
+      voto: votos.find(v => v.idPerfil === p.idPerfil)?.idLugar || null
+    }));
+    // 5. Lugar ganador
+    let lugarGanador = null;
+    let maxVotos = 0;
+    for (const [idLugar, cantidad] of Object.entries(conteo)) {
+      if (cantidad > maxVotos) {
+        maxVotos = cantidad;
+        lugarGanador = idLugar;
+      }
+    }
+    return {
+      votos,
+      conteo,
+      participantes: listaParticipantes,
+      lugarGanador,
+      maxVotos
+    };
+  }
+
+  async finalizarVotacion(idPlan, currentUserId) {
+    // 1. Traer datos mínimos del plan
+    const { data: plan, error: getError } = await supabase
+      .from('Planes')
+      .select('idPlan, idAnfitrion, estado')
+      .eq('idPlan', idPlan)
+      .single();
+    if (getError || !plan) throw new Error('Plan no encontrado');
+    if (String(plan.idAnfitrion) !== String(currentUserId)) {
+      throw new Error('No autorizado para finalizar la votación de este plan');
+    }
+    // 2. Obtener votos
+    const { data: votos, error: votosError } = await supabase
+      .from('VotosLugar')
+      .select('idLugar')
+      .eq('idPlan', idPlan);
+    if (votosError) throw new Error(votosError.message);
+    // 3. Calcular lugar ganador
+    const conteo = {};
+    votos.forEach(v => {
+      conteo[v.idLugar] = (conteo[v.idLugar] || 0) + 1;
+    });
+    let lugarGanador = null;
+    let maxVotos = 0;
+    for (const [idLugar, cantidad] of Object.entries(conteo)) {
+      if (cantidad > maxVotos) {
+        maxVotos = cantidad;
+        lugarGanador = idLugar;
+      }
+    }
+    if (!lugarGanador) throw new Error('No hay votos registrados');
+    // 4. Actualizar el plan con el lugar ganador y estado en progreso (2)
+    const { data: updated, error: updError } = await supabase
+      .from('Planes')
+      .update({ idLugar: lugarGanador, estado: 2 })
+      .eq('idPlan', idPlan)
+      .select()
+      .single();
+    if (updError) throw new Error(updError.message);
+    return updated;
+  }
 } 

@@ -249,6 +249,29 @@ ${text}`;
       res.status(500).json({ error: "Error al consultar Google Places" });
     }
   }
-  
+
+  async refreshPlace(req, res) {
+    try {
+      const { idPlan, lugaresMostrados } = req.body;
+      if (!idPlan || !Array.isArray(lugaresMostrados)) {
+        return res.status(400).json({ error: 'Faltan parámetros requeridos: idPlan, lugaresMostrados' });
+      }
+      // Obtener promedio de coordenadas de los participantes
+      const { data: ubicaciones, error: ubicError } = await this.blintRepository.obtenerCoordenadasParticipantes(idPlan);
+      if (ubicError) throw new Error(ubicError.message);
+      if (!ubicaciones || ubicaciones.length === 0) throw new Error('No hay ubicaciones de participantes');
+      const avgLat = ubicaciones.reduce((sum, u) => sum + u.latitud, 0) / ubicaciones.length;
+      const avgLng = ubicaciones.reduce((sum, u) => sum + u.longitud, 0) / ubicaciones.length;
+      // Buscar lugares cercanos
+      const ideas = ['restaurante', 'bar', 'café', 'parque']; // Puedes mejorar esto
+      const lugares = await this.blintRepository.buscarLugares(ideas, avgLat, avgLng);
+      // Filtrar los ya mostrados
+      const nuevos = lugares.filter(l => !lugaresMostrados.includes(l.place_id));
+      if (nuevos.length === 0) return res.status(404).json({ error: 'No hay más lugares para mostrar' });
+      res.json(nuevos[0]);
+    } catch (err) {
+      res.status(400).json({ error: err.message || err });
+    }
+  }
 
 } 

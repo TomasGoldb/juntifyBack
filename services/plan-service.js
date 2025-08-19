@@ -200,12 +200,70 @@ export class PlanService {
     }
   }
 
+  async cambiarEstadoPlan(req, res) {
+    try {
+      const { estado } = req.body;
+      const idPlan = req.params.idPlan;
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+      }
+      const result = await this.planRepository.cambiarEstadoPlan(idPlan, currentUserId, estado);
+      res.json({ success: true, plan: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message || err });
+    }
+  }
+
   async eliminarPlan(req, res) {
     try {
       await this.planRepository.eliminarPlan(req.params.idPlan);
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ error: err.message || err });
+    }
+  }
+
+  async votarLugar(req, res) {
+    try {
+      const idPlan = req.params.idPlan;
+      const { idLugar } = req.body;
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+      }
+      const result = await this.planRepository.votarLugar(idPlan, currentUserId, idLugar);
+      res.json({ success: true, voto: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message || err });
+    }
+  }
+
+  async estadoVotacion(req, res) {
+    try {
+      const idPlan = req.params.idPlan;
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+      }
+      const result = await this.planRepository.estadoVotacion(idPlan);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message || err });
+    }
+  }
+
+  async finalizarVotacion(req, res) {
+    try {
+      const idPlan = req.params.idPlan;
+      const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
+      if (!currentUserId) {
+        return res.status(403).json({ error: 'No se pudo identificar al usuario' });
+      }
+      const result = await this.planRepository.finalizarVotacion(idPlan, currentUserId);
+      res.json({ success: true, plan: result });
+    } catch (err) {
+      res.status(400).json({ error: err.message || err });
     }
   }
 } 

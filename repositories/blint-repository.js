@@ -31,4 +31,23 @@ async llamarModeloChat(systemPrompt, userPrompt) {
       throw new Error("Error al llamar al modelo");
     }
   }
+
+  async obtenerCoordenadasParticipantes(idPlan) {
+    const { data, error } = await supabase
+      .from('UbicacionParticipante')
+      .select('latitud, longitud')
+      .eq('idPlan', idPlan);
+    return { data, error };
+  }
+
+  async buscarLugares(ideas, lat, lng) {
+    // Simula búsqueda de lugares usando ideas y coordenadas (puedes mejorar con Google Places)
+    // Aquí deberías llamar a la API real, pero para ejemplo:
+    return [
+      { place_id: '1', name: 'Lugar 1', rating: 4.5, vicinity: 'Calle 1' },
+      { place_id: '2', name: 'Lugar 2', rating: 4.2, vicinity: 'Calle 2' },
+      { place_id: '3', name: 'Lugar 3', rating: 4.0, vicinity: 'Calle 3' },
+      { place_id: '4', name: 'Lugar 4', rating: 3.8, vicinity: 'Calle 4' }
+    ];
+  }
 }
