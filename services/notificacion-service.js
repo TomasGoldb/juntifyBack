@@ -19,13 +19,14 @@ export class NotificacionService {
   }
 
   async borrarNotificacion(req, res) {
-    const { idNoti, idPerfil = null } = req.body;
+    const { idNoti } = req.params;
+    const { idPerfil } = req.body;
     if (!idNoti) {
       return res.status(400).json({ error: 'Faltan parámetros: idNoti' });
     }
     try {
-      const updated = await this.notificacionRepository.borrarNotificacion(idNoti, idPerfil);
-      res.json({ success: true, message: 'Notificación marcada como leída', notificacion: updated });
+      const result = await this.notificacionRepository.borrarNotificacion(idNoti, idPerfil);
+      res.json({ success: true, message: 'Notificación eliminada correctamente' });
     } catch (error) {
       res.status(500).json({ error: error.message || error });
     }
@@ -73,7 +74,8 @@ export class NotificacionService {
   }
 
   async marcarComoLeida(req, res) {
-    const { idNoti, idPerfil, leido = true } = req.body;
+    const { idNoti } = req.params;
+    const { idPerfil, leido = true } = req.body;
     if (!idNoti || !idPerfil) {
       return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
     }
