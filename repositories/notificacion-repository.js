@@ -12,24 +12,28 @@ export class NotificacionRepository {
   }
 
   async borrarNotificacion(idNoti, idPerfil, idPlan = null) {
-    // Eliminar físicamente la notificación
+    // En lugar de borrar físicamente, marcamos como leída para preservar el historial
+    // Soporta dos formas:
+    // - Por idNoti (opcionalmente filtrando por idPerfil)
+    // - Por idPlan + idPerfil (para rechazar plan sin conocer idNoti)
+
     if (idNoti) {
       let query = supabase
         .from('Notificaciones')
-        .delete()
+        .update({ leido: true })
         .eq('idNoti', idNoti);
 
       if (idPerfil) {
         query = query.eq('idPerfil', idPerfil);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.select().single();
       if (error) throw new Error(error.message);
-      return { success: true, message: 'Notificación eliminada' };
+      return data;
     }
 
     if (idPlan && idPerfil) {
-      // Buscar notificación por plan + perfil y eliminar por idNoti encontrado
+      // Buscar notificación por plan + perfil y actualizar por idNoti encontrado
       const { data: notificaciones, error: searchError } = await supabase
         .from('Notificaciones')
         .select('idNoti')
@@ -44,11 +48,13 @@ export class NotificacionRepository {
 
       const { data, error } = await supabase
         .from('Notificaciones')
-        .delete()
-        .eq('idNoti', foundIdNoti);
+        .update({ leido: true })
+        .eq('idNoti', foundIdNoti)
+        .select()
+        .single();
 
       if (error) throw new Error(error.message);
-      return { success: true, message: 'Notificación eliminada' };
+      return data;
     }
 
     throw new Error('Parámetros insuficientes: provea idNoti o (idPlan e idPerfil)');
