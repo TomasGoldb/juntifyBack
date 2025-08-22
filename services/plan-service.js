@@ -90,10 +90,10 @@ export class PlanService {
 
   async aceptarInvitacion(req, res) {
     try {
-      const { idPlan, idPerfil } = req.body;
+      const { idPlan, idPerfil, idLugarSalida } = req.body;
       
-      // 1. Aceptar la invitación
-      await this.planRepository.aceptarInvitacion(idPlan, idPerfil);
+      // 1. Aceptar la invitación con ubicación de salida
+      await this.planRepository.aceptarInvitacion(idPlan, idPerfil, idLugarSalida);
       
       // 2. Marcar la notificación como leída usando la misma función de borrar
       try {

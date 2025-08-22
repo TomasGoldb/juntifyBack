@@ -93,10 +93,10 @@ export class PlanRepository {
       .eq('idPlan', idPlan)
       .single();
     if (planError || !plan) throw new Error('Plan no encontrado');
-    // 2. Traer los participantes con perfil
+    // 2. Traer los participantes con perfil y ubicación de salida
     const { data: participantes, error: partError } = await supabase
       .from('ParticipantePlan')
-      .select('idPerfil, estadoParticipante, perfiles: idPerfil (id, nombre, username, foto)')
+      .select('idPerfil, estadoParticipante, idLugarSalida, perfiles: idPerfil (id, nombre, username, foto)')
       .eq('idPlan', idPlan);
     if (partError) throw new Error('Error al obtener participantes');
 
@@ -108,7 +108,8 @@ export class PlanRepository {
       avatarUrl: row.perfiles?.foto,
       estadoParticipante: row.estadoParticipante,
       aceptado: row.estadoParticipante === 1,
-      anfitrion: row.idPerfil === plan.idAnfitrion
+      anfitrion: row.idPerfil === plan.idAnfitrion,
+      idLugarSalida: row.idLugarSalida || null // Incluir ubicación de salida
     }));
 
     // 4. Determinar el estado del usuario actual dentro del plan
@@ -222,10 +223,19 @@ export class PlanRepository {
     return data?.estadoParticipante || null;
   }
 
-  async aceptarInvitacion(idPlan, idPerfil) {
+  async aceptarInvitacion(idPlan, idPerfil, idLugarSalida = null) {
+    const updateData = { 
+      estadoParticipante: 1 
+    };
+    
+    // Agregar ubicación de salida si se proporciona
+    if (idLugarSalida) {
+      updateData.idLugarSalida = idLugarSalida;
+    }
+    
     const { error } = await supabase
       .from('ParticipantePlan')
-      .update({ estadoParticipante: 1 })
+      .update(updateData)
       .eq('idPlan', idPlan)
       .eq('idPerfil', idPerfil);
     if (error) throw new Error(error.message);
