@@ -19,7 +19,8 @@ export class NotificacionService {
   }
 
   async borrarNotificacion(req, res) {
-    const { idNoti, idPerfil = null } = req.body;
+    const { idNoti } = req.params;
+    const { idPerfil } = req.body;
     if (!idNoti) {
       return res.status(400).json({ error: 'Faltan parámetros: idNoti' });
     }
@@ -73,7 +74,8 @@ export class NotificacionService {
   }
 
   async marcarComoLeida(req, res) {
-    const { idNoti, idPerfil, leido = true } = req.body;
+    const { idNoti } = req.params;
+    const { idPerfil, leido = true } = req.body;
     if (!idNoti || !idPerfil) {
       return res.status(400).json({ error: 'Faltan parámetros: idNoti, idPerfil' });
     }
