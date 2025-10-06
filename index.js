@@ -12,6 +12,7 @@ import amigoController from './controllers/amigo-controller.js';
 import blintController from './controllers/blint-controller.js';
 import direccionController from './controllers/direccion-controller.js';
 import ubicacionController from './controllers/ubicacion-controller.js';
+import perfilController from './controllers/perfil-controller.js';
 import metricsRoutes from './routes/metrics-routes.js';
 import { authenticateToken } from './middlewares/authentication-middleware.js';
 
@@ -201,6 +202,8 @@ app.use('/api/users', userController);
 app.use('/api/planes', planController);
 app.use('/api/notificaciones', notificacionController);
 app.use('/api/amigos', amigoController);
+// Perfiles (protegidas con autenticación)
+app.use('/api/perfiles', perfilController);
 // Direcciones (protegidas con autenticación)
 app.use('/api/direcciones', authenticateToken, direccionController);
 // Alias singular para compatibilidad
