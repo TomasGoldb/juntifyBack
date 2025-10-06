@@ -195,80 +195,111 @@ export class PlanRepository {
   }
 
   async planesDeUsuario(userId, limit = 10, offset = 0) {
-    // 1. Buscar idPlanes donde el usuario participa y aceptó (estadoParticipante = 1)
-    const { data: participaciones, error: partError } = await supabase
-      .from('ParticipantePlan')
-      .select('idPlan')
-      .eq('idPerfil', userId)
-      .eq('estadoParticipante', 1);
-    if (partError) throw new Error(partError.message);
-    const idPlanesParticipa = participaciones.map(p => p.idPlan);
-    
-    // 2. Buscar todos los planes donde es anfitrión o participante
-    let filters = [`idAnfitrion.eq.${userId}`];
-    if (idPlanesParticipa.length > 0) {
-      filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
-    }
-    
-    // 3. Obtener el total de planes para la paginación
-    const { count: totalPlanes, error: countError } = await supabase
-      .from('Planes')
-      .select('*', { count: 'exact', head: true })
-      .or(filters.join(','));
-    if (countError) throw new Error(countError.message);
-    
-    // 4. Obtener los planes con participantes y perfiles en una sola consulta
-    const { data: planes, error: planesError } = await supabase
-      .from('Planes')
-      .select(`
-        idPlan, nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, plan_type_id, plan_state_id, fechaCreacion,
-        participantes:ParticipantePlan (
-          idPerfil,
-          estadoParticipante,
-          perfil:perfiles (
-            id, nombre, username, foto
-          )
-        )
-      `)
-      .or(filters.join(','))
-      .order('fechaCreacion', { ascending: false })
-      .range(offset, offset + limit - 1);
-    if (planesError) throw new Error(planesError.message);
-    
-    // 5. Mapear los datos para el frontend
-    const planesConParticipantes = [];
-    for (const plan of planes) {
-      const expanded = await this.#expandPlan(plan);
-      planesConParticipantes.push({
-        idPlan: expanded.idPlan,
-        nombrePlan: expanded.nombrePlan,
-        descPlan: expanded.descPlan,
-        idLugar: expanded.idLugar,
-        inicioPlan: expanded.inicioPlan,
-        finPlan: expanded.finPlan,
-        idAnfitrion: expanded.idAnfitrion,
-        tipoPlan: expanded.tipoPlan,
-        estado: expanded.estado,
-        fechaCreacion: expanded.fechaCreacion,
-        participantes: (plan.participantes || []).map(p => ({
-          id: p.idPerfil,
-          nombre: p.perfil?.nombre,
-          username: p.perfil?.username,
-          avatarUrl: p.perfil?.foto,
-          estadoParticipante: p.estadoParticipante
-        }))
-      });
-    }
-    
-    return {
-      planes: planesConParticipantes,
-      paginacion: {
-        total: totalPlanes,
-        limit,
-        offset,
-        hasMore: offset + limit < totalPlanes
+    try {
+      // Validar parámetros
+      const userIdNum = parseInt(userId);
+      if (isNaN(userIdNum)) {
+        throw new Error('userId debe ser un número válido');
       }
-    };
+      
+      // 1. Buscar idPlanes donde el usuario participa y aceptó (estadoParticipante = 1)
+      const { data: participaciones, error: partError } = await supabase
+        .from('ParticipantePlan')
+        .select('idPlan')
+        .eq('idPerfil', userIdNum)
+        .eq('estadoParticipante', 1);
+      
+      if (partError) {
+        console.error('[planesDeUsuario] Error al obtener participaciones:', partError);
+        throw new Error('Error al obtener participaciones del usuario');
+      }
+      
+      const idPlanesParticipa = participaciones.map(p => p.idPlan);
+      
+      // 2. Construir filtros para planes donde es anfitrión o participante aceptado
+      let filters = [`idAnfitrion.eq.${userIdNum}`];
+      if (idPlanesParticipa.length > 0) {
+        filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
+      }
+      
+      // 3. Obtener el total de planes para la paginación
+      const { count: totalPlanes, error: countError } = await supabase
+        .from('Planes')
+        .select('*', { count: 'exact', head: true })
+        .or(filters.join(','));
+      
+      if (countError) {
+        console.error('[planesDeUsuario] Error al contar planes:', countError);
+        throw new Error('Error al contar planes del usuario');
+      }
+      
+      // 4. Obtener los planes con participantes y perfiles en una sola consulta
+      const { data: planes, error: planesError } = await supabase
+        .from('Planes')
+        .select(`
+          idPlan, nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, plan_type_id, plan_state_id, fechaCreacion,
+          participantes:ParticipantePlan (
+            idPerfil,
+            estadoParticipante,
+            perfil:perfiles (
+              id, nombre, username, foto
+            )
+          )
+        `)
+        .or(filters.join(','))
+        .order('fechaCreacion', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (planesError) {
+        console.error('[planesDeUsuario] Error al obtener planes:', planesError);
+        throw new Error('Error al obtener planes del usuario');
+      }
+      
+      // 5. Mapear los datos para el frontend
+      const planesConParticipantes = [];
+      for (const plan of planes || []) {
+        try {
+          const expanded = await this.#expandPlan(plan);
+          if (expanded) {
+            planesConParticipantes.push({
+              idPlan: expanded.idPlan,
+              nombrePlan: expanded.nombrePlan,
+              descPlan: expanded.descPlan,
+              idLugar: expanded.idLugar,
+              inicioPlan: expanded.inicioPlan,
+              finPlan: expanded.finPlan,
+              idAnfitrion: expanded.idAnfitrion,
+              tipoPlan: expanded.tipoPlan,
+              estado: expanded.estado,
+              fechaCreacion: expanded.fechaCreacion,
+              participantes: (plan.participantes || []).map(p => ({
+                id: p.idPerfil,
+                nombre: p.perfil?.nombre,
+                username: p.perfil?.username,
+                avatarUrl: p.perfil?.foto,
+                estadoParticipante: p.estadoParticipante
+              }))
+            });
+          }
+        } catch (expandError) {
+          console.error('[planesDeUsuario] Error al expandir plan:', expandError);
+          // Continuar con el siguiente plan si hay error al expandir uno
+        }
+      }
+      
+      return {
+        planes: planesConParticipantes,
+        paginacion: {
+          total: totalPlanes || 0,
+          limit,
+          offset,
+          hasMore: (offset + limit) < (totalPlanes || 0)
+        }
+      };
+    } catch (error) {
+      console.error('[planesDeUsuario] Error general:', error);
+      throw error;
+    }
   }
 
   async invitacionesPendientes(userId) {

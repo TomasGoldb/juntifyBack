@@ -48,10 +48,55 @@ export class PlanService {
       const limit = parseInt(req.query.limit) || 10;
       const offset = parseInt(req.query.offset) || 0;
       
-      const resultado = await this.planRepository.planesDeUsuario(req.params.userId, limit, offset);
-      res.json(resultado);
+      // Validar que limit y offset sean números válidos
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        return res.status(400).json({ 
+          error: 'El parámetro limit debe ser un número entre 1 y 100',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      if (isNaN(offset) || offset < 0) {
+        return res.status(400).json({ 
+          error: 'El parámetro offset debe ser un número mayor o igual a 0',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      // Validar que userId sea válido
+      const userId = req.params.userId;
+      if (!userId || isNaN(parseInt(userId))) {
+        return res.status(400).json({ 
+          error: 'El userId debe ser un número válido',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      const resultado = await this.planRepository.planesDeUsuario(userId, limit, offset);
+      
+      // Asegurar que el resultado tenga la estructura esperada
+      const response = {
+        planes: resultado.planes || [],
+        paginacion: {
+          hasMore: resultado.paginacion?.hasMore || false,
+          total: resultado.paginacion?.total || 0,
+          limit: resultado.paginacion?.limit || limit,
+          offset: resultado.paginacion?.offset || offset
+        }
+      };
+      
+      res.json(response);
     } catch (err) {
-      res.status(500).json({ error: err.message || err });
+      console.error('[planesDeUsuario] Error:', err);
+      // En caso de error, devolver estructura consistente
+      res.status(500).json({ 
+        error: err.message || 'Error interno del servidor',
+        planes: [],
+        paginacion: { hasMore: false }
+      });
     }
   }
 
@@ -60,10 +105,55 @@ export class PlanService {
       const limit = parseInt(req.query.limit) || 10;
       const offset = parseInt(req.query.offset) || 0;
       
-      const resultado = await this.planRepository.planesDeUsuario(req.params.userId, limit, offset);
-      res.json(resultado);
+      // Validar que limit y offset sean números válidos
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        return res.status(400).json({ 
+          error: 'El parámetro limit debe ser un número entre 1 y 100',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      if (isNaN(offset) || offset < 0) {
+        return res.status(400).json({ 
+          error: 'El parámetro offset debe ser un número mayor o igual a 0',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      // Validar que userId sea válido
+      const userId = req.params.userId;
+      if (!userId || isNaN(parseInt(userId))) {
+        return res.status(400).json({ 
+          error: 'El userId debe ser un número válido',
+          planes: [],
+          paginacion: { hasMore: false }
+        });
+      }
+      
+      const resultado = await this.planRepository.planesDeUsuario(userId, limit, offset);
+      
+      // Asegurar que el resultado tenga la estructura esperada
+      const response = {
+        planes: resultado.planes || [],
+        paginacion: {
+          hasMore: resultado.paginacion?.hasMore || false,
+          total: resultado.paginacion?.total || 0,
+          limit: resultado.paginacion?.limit || limit,
+          offset: resultado.paginacion?.offset || offset
+        }
+      };
+      
+      res.json(response);
     } catch (err) {
-      res.status(500).json({ error: err.message || err });
+      console.error('[cargarMasPlanes] Error:', err);
+      // En caso de error, devolver estructura consistente
+      res.status(500).json({ 
+        error: err.message || 'Error interno del servidor',
+        planes: [],
+        paginacion: { hasMore: false }
+      });
     }
   }
 
