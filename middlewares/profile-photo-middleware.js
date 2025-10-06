@@ -14,7 +14,7 @@ function validatePhotoUrl(fotoUrl) {
   }
 
   // Verificar que sea de nuestro Supabase Storage
-  const expectedPrefix = `${SUPABASE_URL}/storage/v1/object/public/perfiles/`;
+  const expectedPrefix = `${SUPABASE_URL}/storage/v1/object/public/perfil/`;
   if (!fotoUrl.startsWith(expectedPrefix)) {
     return { isValid: false, error: 'URL de foto debe ser de nuestro storage' };
   }
