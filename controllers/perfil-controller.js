@@ -3,6 +3,7 @@ import { PerfilService } from '../services/perfil-service.js';
 import { authenticateToken } from '../middlewares/authentication-middleware.js';
 import { validateProfilePhotoUpdate, rateLimitPhotoUpdates, logPhotoOperation } from '../middlewares/profile-photo-middleware.js';
 import { supabase } from '../configs/db-config.js';
+import expressJson from 'express';
 
 const router = express.Router();
 const perfilService = new PerfilService();
@@ -172,5 +173,40 @@ router.post('/:userId/foto/signed-url', authenticateToken, async (req, res) => {
     res.json({ fileName, bucket, ...data });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Subida server-side (bypassa RLS usando service key)
+router.post('/:userId/foto/upload', express.json({ limit: '8mb' }), authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (req.user?.id !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const { dataBase64, contentType = 'image/jpeg' } = req.body || {};
+    if (!dataBase64) {
+      return res.status(400).json({ error: 'dataBase64 es requerido' });
+    }
+
+    const timestamp = Date.now();
+    const fileName = `user_${userId}_${timestamp}.jpg`;
+    const bucket = 'perfiles';
+
+    const buffer = Buffer.from(dataBase64, 'base64');
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from(bucket)
+      .upload(fileName, buffer, { contentType, upsert: true });
+
+    if (uploadError) {
+      return res.status(400).json({ error: uploadError.message });
+    }
+
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    return res.json({ publicUrl: urlData?.publicUrl, path: fileName });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
