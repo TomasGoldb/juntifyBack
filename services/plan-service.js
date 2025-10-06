@@ -91,11 +91,10 @@ export class PlanService {
       res.json(response);
     } catch (err) {
       console.error('[planesDeUsuario] Error:', err);
-      // En caso de error, devolver estructura consistente
-      res.status(500).json({ 
-        error: err.message || 'Error interno del servidor',
+      // En caso de error, devolver estructura consistente con 200
+      return res.status(200).json({ 
         planes: [],
-        paginacion: { hasMore: false }
+        paginacion: { hasMore: false, total: 0, limit: parseInt(req.query.limit) || 10, offset: parseInt(req.query.offset) || 0 }
       });
     }
   }
@@ -148,11 +147,10 @@ export class PlanService {
       res.json(response);
     } catch (err) {
       console.error('[cargarMasPlanes] Error:', err);
-      // En caso de error, devolver estructura consistente
-      res.status(500).json({ 
-        error: err.message || 'Error interno del servidor',
+      // En caso de error, devolver estructura consistente con 200
+      return res.status(200).json({ 
         planes: [],
-        paginacion: { hasMore: false }
+        paginacion: { hasMore: false, total: 0, limit: parseInt(req.query.limit) || 10, offset: parseInt(req.query.offset) || 0 }
       });
     }
   }
