@@ -2,6 +2,7 @@ import express from 'express';
 import { PerfilService } from '../services/perfil-service.js';
 import { authenticateToken } from '../middlewares/authentication-middleware.js';
 import { validateProfilePhotoUpdate, rateLimitPhotoUpdates, logPhotoOperation } from '../middlewares/profile-photo-middleware.js';
+import { supabase } from '../configs/db-config.js';
 
 const router = express.Router();
 const perfilService = new PerfilService();
@@ -146,3 +147,30 @@ router.put('/:userId',
 );
 
 export default router;
+
+// Endpoint para generar URL firmada de subida a Storage (RLS-safe)
+router.post('/:userId/foto/signed-url', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (req.user?.id !== userId) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const timestamp = Date.now();
+    const fileName = `user_${userId}_${timestamp}.jpg`;
+    const bucket = 'perfiles';
+
+    const { data, error } = await supabase
+      .storage
+      .from(bucket)
+      .createSignedUploadUrl(fileName);
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ fileName, bucket, ...data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
