@@ -1,5 +1,34 @@
 # Base de Datos - Juntify
 
+## Normalización de estados de Planes por tipo
+
+Ejecutar el script `database/migracion_plan_states.sql` en Postgres (o Supabase) para:
+
+- Crear catálogos `plan_types` y `plan_states`.
+- Agregar columnas `plan_type_id` y `plan_state_id` en `"Planes"`.
+- Seed de tipos y estados por tipo.
+- Migrar datos desde columnas legacy si existen: `tipoPlan` (texto) y `estado` (entero).
+- Agregar FKs e índices.
+
+Notas:
+- Las columnas legacy NO se eliminan automáticamente. Una vez validado, ejecutar manualmente en producción:
+  - `ALTER TABLE "Planes" DROP COLUMN estado;`
+  - `ALTER TABLE "Planes" DROP COLUMN "tipoPlan";`
+- Asegúrate de tener backups y de correr primero `database/verificar_tablas.sql` para auditar el esquema.
+
+### Reglas de transición
+
+- Predefinido: 0 → 1 → 2 (2 es terminal)
+- Personalizado: 0 → 1 → 2 → 3 (3 es terminal)
+- La API valida transiciones; acepta `code` numérico o `slug` string.
+
+### Respuesta API (planes)
+
+Las respuestas incluyen:
+`tipoPlan: { id, slug, name }` y `estado: { id, code, slug, name }`.
+
+---
+
 ## Cambios en la tabla ParticipantePlan
 
 ### Modificación del campo de estado

@@ -202,7 +202,7 @@ export class PlanService {
 
   async cambiarEstadoPlan(req, res) {
     try {
-      const { estado } = req.body;
+      const { estado } = req.body; // puede ser number code, string slug, o objeto {code|slug}
       const idPlan = req.params.idPlan;
       const currentUserId = req.user?.idPerfil || req.user?.id || req.user?.userId || null;
       if (!currentUserId) {

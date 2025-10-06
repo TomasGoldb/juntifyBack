@@ -1,6 +1,75 @@
 import { supabase } from '../configs/db-config.js';
 
 export class PlanRepository {
+  async #getPlanType(planTypeId) {
+    const { data, error } = await supabase
+      .from('plan_types')
+      .select('*')
+      .eq('id', planTypeId)
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async #getPlanStateById(stateId) {
+    const { data, error } = await supabase
+      .from('plan_states')
+      .select('*')
+      .eq('id', stateId)
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async #getPlanStateByCode(planTypeId, code) {
+    const { data, error } = await supabase
+      .from('plan_states')
+      .select('*')
+      .eq('plan_type_id', planTypeId)
+      .eq('code', code)
+      .single();
+    if (error) throw new Error('Estado inválido para el tipo de plan');
+    return data;
+  }
+
+  async #getPlanStateBySlug(planTypeId, slug) {
+    const { data, error } = await supabase
+      .from('plan_states')
+      .select('*')
+      .eq('plan_type_id', planTypeId)
+      .eq('slug', slug)
+      .single();
+    if (error) throw new Error('Estado inválido para el tipo de plan');
+    return data;
+  }
+
+  #isValidTransition(planTypeId, currentCode, nextCode) {
+    // Reglas: Predefinido (1): 0->1->2 (terminal 2)
+    //         Personalizado (2): 0->1->2->3 (terminal 3)
+    if (planTypeId === 1) {
+      if (currentCode === 0 && nextCode === 1) return true;
+      if (currentCode === 1 && nextCode === 2) return true;
+      return currentCode === nextCode; // idempotencia
+    }
+    if (planTypeId === 2) {
+      if (currentCode === 0 && nextCode === 1) return true;
+      if (currentCode === 1 && nextCode === 2) return true;
+      if (currentCode === 2 && nextCode === 3) return true;
+      return currentCode === nextCode;
+    }
+    return false;
+  }
+
+  async #expandPlan(planRow) {
+    if (!planRow) return null;
+    const planType = await this.#getPlanType(planRow.plan_type_id);
+    const planState = await this.#getPlanStateById(planRow.plan_state_id);
+    return {
+      ...planRow,
+      tipoPlan: { id: planType.id, slug: planType.slug, name: planType.name },
+      estado: { id: planState.id, code: planState.code, slug: planState.slug, name: planState.name }
+    };
+  }
   async crearPlan({ nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, participantes }) {
     // 1. Insertar el plan
     const { data: planData, error: planError } = await supabase
@@ -37,7 +106,7 @@ export class PlanRepository {
     // 1) Traer datos mínimos del plan
     const { data: plan, error: getError } = await supabase
       .from('Planes')
-      .select('idPlan, idAnfitrion, estado, inicioPlan')
+      .select('idPlan, idAnfitrion, plan_type_id, plan_state_id, inicioPlan')
       .eq('idPlan', idPlan)
       .single();
     if (getError || !plan) throw new Error('Plan no encontrado');
@@ -60,29 +129,34 @@ export class PlanRepository {
       throw new Error('No autorizado para iniciar este plan');
     }
 
-    // 3) Si ya está iniciado, devolver tal cual (2 = Empezado)
-    if (plan.estado === 2) {
-      return plan;
-    }
-
-    // 4) Marcar como iniciado (estado = 2) y fijar inicioPlan si no estaba
+    // Obtener estado actual
+    const currentState = await this.#getPlanStateById(plan.plan_state_id);
+    // Para compatibilidad, iniciarPlan avanza un paso si aplica (0->1 o 1->2 para predefinido; 0->1 o 1->2 para personalizado)
+    const nextCode = currentState.code + 1;
+    const allowed = this.#isValidTransition(plan.plan_type_id, currentState.code, nextCode);
+    if (!allowed) return await this.#expandPlan(plan);
+    const nextState = await this.#getPlanStateByCode(plan.plan_type_id, nextCode);
     const { data: updated, error: updError } = await supabase
       .from('Planes')
       .update({
-        estado: 2,
+        plan_state_id: nextState.id,
         inicioPlan: plan.inicioPlan ?? new Date().toISOString()
       })
       .eq('idPlan', idPlan)
       .select()
       .single();
     if (updError) throw new Error(updError.message);
-    return updated;
+    return await this.#expandPlan(updated);
   }
 
   async obtenerPlan(idPlan) {
-    const { data, error } = await supabase.from('Planes').select('*').eq('idPlan', idPlan).single();
+    const { data, error } = await supabase
+      .from('Planes')
+      .select('*')
+      .eq('idPlan', idPlan)
+      .single();
     if (error) throw new Error(error.message);
-    return data;
+    return await this.#expandPlan(data);
   }
 
   async detallePlan(idPlan, currentUserId) {
@@ -116,7 +190,8 @@ export class PlanRepository {
     const miParticipacion = participantes.find(p => p.idPerfil === currentUserId);
     const miEstadoParticipante = miParticipacion?.estadoParticipante ?? (currentUserId === plan.idAnfitrion ? 1 : null);
 
-    return { ...plan, participantes: participantesList, miEstadoParticipante };
+    const expanded = await this.#expandPlan(plan);
+    return { ...expanded, participantes: participantesList, miEstadoParticipante };
   }
 
   async planesDeUsuario(userId, limit = 10, offset = 0) {
@@ -146,7 +221,7 @@ export class PlanRepository {
     const { data: planes, error: planesError } = await supabase
       .from('Planes')
       .select(`
-        idPlan, nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, estado, fechaCreacion,
+        idPlan, nombrePlan, descPlan, idLugar, inicioPlan, finPlan, idAnfitrion, plan_type_id, plan_state_id, fechaCreacion,
         participantes:ParticipantePlan (
           idPerfil,
           estadoParticipante,
@@ -161,24 +236,29 @@ export class PlanRepository {
     if (planesError) throw new Error(planesError.message);
     
     // 5. Mapear los datos para el frontend
-    const planesConParticipantes = planes.map(plan => ({
-      idPlan: plan.idPlan,
-      nombrePlan: plan.nombrePlan,
-      descPlan: plan.descPlan,
-      idLugar: plan.idLugar,
-      inicioPlan: plan.inicioPlan,
-      finPlan: plan.finPlan,
-      idAnfitrion: plan.idAnfitrion,
-      estado: plan.estado,
-      fechaCreacion: plan.fechaCreacion,
-      participantes: (plan.participantes || []).map(p => ({
-        id: p.idPerfil,
-        nombre: p.perfil?.nombre,
-        username: p.perfil?.username,
-        avatarUrl: p.perfil?.foto,
-        estadoParticipante: p.estadoParticipante
-      }))
-    }));
+    const planesConParticipantes = [];
+    for (const plan of planes) {
+      const expanded = await this.#expandPlan(plan);
+      planesConParticipantes.push({
+        idPlan: expanded.idPlan,
+        nombrePlan: expanded.nombrePlan,
+        descPlan: expanded.descPlan,
+        idLugar: expanded.idLugar,
+        inicioPlan: expanded.inicioPlan,
+        finPlan: expanded.finPlan,
+        idAnfitrion: expanded.idAnfitrion,
+        tipoPlan: expanded.tipoPlan,
+        estado: expanded.estado,
+        fechaCreacion: expanded.fechaCreacion,
+        participantes: (plan.participantes || []).map(p => ({
+          id: p.idPerfil,
+          nombre: p.perfil?.nombre,
+          username: p.perfil?.username,
+          avatarUrl: p.perfil?.foto,
+          estadoParticipante: p.estadoParticipante
+        }))
+      });
+    }
     
     return {
       planes: planesConParticipantes,
@@ -269,7 +349,7 @@ export class PlanRepository {
     // 1) Traer datos mínimos del plan
     const { data: plan, error: getError } = await supabase
       .from('Planes')
-      .select('idPlan, idAnfitrion, estado')
+      .select('idPlan, idAnfitrion, plan_type_id, plan_state_id')
       .eq('idPlan', idPlan)
       .single();
     if (getError || !plan) throw new Error('Plan no encontrado');
@@ -277,15 +357,41 @@ export class PlanRepository {
     if (String(plan.idAnfitrion) !== String(currentUserId)) {
       throw new Error('No autorizado para cambiar el estado de este plan');
     }
-    // 3) Actualizar el estado
+    // 3) Resolver destino por code o slug
+    const currentState = await this.#getPlanStateById(plan.plan_state_id);
+    let targetState;
+    if (typeof nuevoEstado === 'number') {
+      targetState = await this.#getPlanStateByCode(plan.plan_type_id, nuevoEstado);
+    } else if (typeof nuevoEstado === 'string') {
+      const maybeNum = Number(nuevoEstado);
+      if (!Number.isNaN(maybeNum)) {
+        targetState = await this.#getPlanStateByCode(plan.plan_type_id, maybeNum);
+      } else {
+        targetState = await this.#getPlanStateBySlug(plan.plan_type_id, nuevoEstado);
+      }
+    } else if (nuevoEstado && typeof nuevoEstado === 'object') {
+      if (nuevoEstado.code !== undefined) {
+        targetState = await this.#getPlanStateByCode(plan.plan_type_id, nuevoEstado.code);
+      } else if (nuevoEstado.slug) {
+        targetState = await this.#getPlanStateBySlug(plan.plan_type_id, nuevoEstado.slug);
+      }
+    }
+    if (!targetState) throw new Error('Formato de estado no soportado');
+
+    // 4) Validar transición
+    if (!this.#isValidTransition(plan.plan_type_id, currentState.code, targetState.code)) {
+      throw new Error('Transición de estado inválida');
+    }
+
+    // 5) Actualizar el estado
     const { data: updated, error: updError } = await supabase
       .from('Planes')
-      .update({ estado: nuevoEstado })
+      .update({ plan_state_id: targetState.id })
       .eq('idPlan', idPlan)
       .select()
       .single();
     if (updError) throw new Error(updError.message);
-    return updated;
+    return await this.#expandPlan(updated);
   }
 
   async votarLugar(idPlan, idPerfil, idLugar) {
@@ -349,7 +455,7 @@ export class PlanRepository {
     // 1. Traer datos mínimos del plan
     const { data: plan, error: getError } = await supabase
       .from('Planes')
-      .select('idPlan, idAnfitrion, estado')
+      .select('idPlan, idAnfitrion, plan_type_id, plan_state_id')
       .eq('idPlan', idPlan)
       .single();
     if (getError || !plan) throw new Error('Plan no encontrado');
@@ -376,14 +482,22 @@ export class PlanRepository {
       }
     }
     if (!lugarGanador) throw new Error('No hay votos registrados');
-    // 4. Actualizar el plan con el lugar ganador y estado en progreso (2)
+    // 4. Actualizar el plan con el lugar ganador y avanzar al siguiente estado válido
+    const currentState = await this.#getPlanStateById(plan.plan_state_id);
+    const nextCode = currentState.code + 1; // personalizado: 2->3
+    const allowed = this.#isValidTransition(plan.plan_type_id, currentState.code, nextCode);
+    const updates = { idLugar: lugarGanador };
+    if (allowed) {
+      const nextState = await this.#getPlanStateByCode(plan.plan_type_id, nextCode);
+      updates.plan_state_id = nextState.id;
+    }
     const { data: updated, error: updError } = await supabase
       .from('Planes')
-      .update({ idLugar: lugarGanador, estado: 2 })
+      .update(updates)
       .eq('idPlan', idPlan)
       .select()
       .single();
     if (updError) throw new Error(updError.message);
-    return updated;
+    return await this.#expandPlan(updated);
   }
 } 
