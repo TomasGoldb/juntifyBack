@@ -1,15 +1,15 @@
--- Configuración de Supabase Storage para el bucket 'perfil'
+-- Configuración de Supabase Storage para el bucket 'perfiles'
 -- Este archivo contiene las políticas de seguridad necesarias para el funcionamiento correcto
 
--- 1. Crear el bucket 'perfil' si no existe
+-- 1. Crear el bucket 'perfiles' si no existe
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('perfil', 'perfil', true)
+VALUES ('perfiles', 'perfiles', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Política para permitir que los usuarios vean fotos de perfil (lectura pública)
 CREATE POLICY "Permitir lectura pública de fotos de perfil"
 ON storage.objects FOR SELECT
-USING (bucket_id = 'perfil');
+USING (bucket_id = 'perfiles');
 
 -- 3. Función auxiliar para extraer el user_id del nombre del archivo
 -- Los archivos se nombran como: user_{userId}_{timestamp}.jpg
@@ -26,7 +26,7 @@ $$ LANGUAGE plpgsql;
 CREATE POLICY "Permitir subida de fotos propias"
 ON storage.objects FOR INSERT
 WITH CHECK (
-  bucket_id = 'perfil' 
+  bucket_id = 'perfiles' 
   AND auth.uid()::text = extract_user_id_from_filename(name)
 );
 
@@ -34,7 +34,7 @@ WITH CHECK (
 CREATE POLICY "Permitir actualización de fotos propias"
 ON storage.objects FOR UPDATE
 USING (
-  bucket_id = 'perfil' 
+  bucket_id = 'perfiles' 
   AND auth.uid()::text = extract_user_id_from_filename(name)
 );
 
@@ -42,7 +42,7 @@ USING (
 CREATE POLICY "Permitir eliminación de fotos propias"
 ON storage.objects FOR DELETE
 USING (
-  bucket_id = 'perfil' 
+  bucket_id = 'perfiles' 
   AND auth.uid()::text = extract_user_id_from_filename(name)
 );
 
@@ -71,13 +71,13 @@ DECLARE
 BEGIN
   -- Eliminar archivos de más de 30 días que no estén referenciados en la tabla perfiles
   DELETE FROM storage.objects 
-  WHERE bucket_id = 'perfil' 
+  WHERE bucket_id = 'perfiles' 
     AND created_at < cutoff_date
     AND name NOT IN (
       SELECT substring(foto from '[^/]+$') 
       FROM perfiles 
       WHERE foto IS NOT NULL 
-        AND foto LIKE '%/storage/v1/object/public/perfil/%'
+        AND foto LIKE '%/storage/v1/object/public/perfiles/%'
     );
 END;
 $$ LANGUAGE plpgsql;
@@ -110,7 +110,7 @@ SELECT
   MIN(created_at) as oldest_file,
   MAX(created_at) as newest_file
 FROM storage.objects 
-WHERE bucket_id = 'perfil';
+WHERE bucket_id = 'perfiles';
 
 -- Comentarios sobre configuración adicional:
 -- 

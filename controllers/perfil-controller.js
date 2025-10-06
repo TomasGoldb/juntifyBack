@@ -159,7 +159,7 @@ router.post('/:userId/foto/signed-url', authenticateToken, async (req, res) => {
 
     const timestamp = Date.now();
     const fileName = `user_${userId}_${timestamp}.jpg`;
-    const bucket = 'perfil';
+    const bucket = 'perfiles';
 
     const { data, error } = await supabase
       .storage
@@ -191,7 +191,7 @@ router.post('/:userId/foto/upload', express.json({ limit: '8mb' }), authenticate
 
     const timestamp = Date.now();
     const fileName = `user_${userId}_${timestamp}.jpg`;
-    const bucket = 'perfil';
+    const bucket = 'perfiles';
 
     const buffer = Buffer.from(dataBase64, 'base64');
 
