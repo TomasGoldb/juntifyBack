@@ -14,6 +14,7 @@ import direccionController from './controllers/direccion-controller.js';
 import ubicacionController from './controllers/ubicacion-controller.js';
 import perfilController from './controllers/perfil-controller.js';
 import metricsRoutes from './routes/metrics-routes.js';
+import favoritosController from './controllers/favoritos-controller.js';
 import { authenticateToken } from './middlewares/authentication-middleware.js';
 
 const app = express();
@@ -212,6 +213,8 @@ app.use('/api/direccion', authenticateToken, direccionController);
 app.use('/api', ubicacionController);
 // Métricas
 app.use('/api/metrics', metricsRoutes);
+// Favoritos (protegidas con autenticación desde el controller)
+app.use('/api/favoritos', favoritosController);
 
 
 import { initSocket } from './configs/socket.js';
