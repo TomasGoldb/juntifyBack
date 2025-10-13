@@ -39,6 +39,25 @@ router.get('/:userId', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/perfiles/:userId/favoritos
+ * Lista los favoritos del perfil autenticado
+ */
+router.get('/:userId/favoritos', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (req.user.id !== userId && String(req.user.idPerfil || req.user.id || req.user.userId) !== String(userId)) {
+      return res.status(403).json({ error: 'No autorizado para ver estos favoritos' });
+    }
+    const { FavoritosService } = await import('../services/favoritos-service.js');
+    const favService = new FavoritosService();
+    return favService.listarFavoritos(req, res);
+  } catch (error) {
+    console.error('Error listando favoritos:', error);
+    res.status(500).json({ error: 'Error interno del servidor', message: error.message });
+  }
+});
+
+/**
  * PUT /api/perfiles/:userId/foto
  * Actualiza la foto de perfil de un usuario
  */
