@@ -196,31 +196,35 @@ export class PlanRepository {
 
   async planesDeUsuario(userId, limit = 10, offset = 0) {
     try {
-      // Validar parámetros
-      const userIdNum = parseInt(userId);
-      if (isNaN(userIdNum)) {
-        throw new Error('userId debe ser un número válido');
+      console.log('[planesDeUsuario] Buscando planes para userId:', userId, 'tipo:', typeof userId);
+      
+      // No convertir a número, mantener como string (soporta tanto números como UUIDs)
+      if (!userId) {
+        throw new Error('userId es requerido');
       }
       
-      // 1. Buscar idPlanes donde el usuario participa y aceptó (estadoParticipante = 1)
+      // 1. Buscar idPlanes donde el usuario participa (cualquier estado)
       const { data: participaciones, error: partError } = await supabase
         .from('ParticipantePlan')
         .select('idPlan')
-        .eq('idPerfil', userIdNum)
-        .eq('estadoParticipante', 1);
+        .eq('idPerfil', userId);
       
       if (partError) {
         console.error('[planesDeUsuario] Error al obtener participaciones:', partError);
         throw new Error('Error al obtener participaciones del usuario');
       }
       
+      console.log('[planesDeUsuario] Participaciones encontradas:', participaciones?.length || 0);
+      
       const idPlanesParticipa = participaciones.map(p => p.idPlan);
       
-      // 2. Construir filtros para planes donde es anfitrión o participante aceptado
-      let filters = [`idAnfitrion.eq.${userIdNum}`];
+      // 2. Construir filtros para planes donde es anfitrión o participante
+      let filters = [`idAnfitrion.eq.${userId}`];
       if (idPlanesParticipa.length > 0) {
         filters.push(`idPlan.in.(${idPlanesParticipa.join(',')})`);
       }
+      
+      console.log('[planesDeUsuario] Filtros construidos:', filters);
       
       // 3. Obtener el total de planes para la paginación
       const { count: totalPlanes, error: countError } = await supabase
