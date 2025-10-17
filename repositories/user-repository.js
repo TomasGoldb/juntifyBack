@@ -47,4 +47,62 @@ export class UserRepository {
       return { ...perfil, fecha_amigo: info ? info.fecha_amigo : null };
     });
   }
+
+  async obtenerPerfilPorEmail(email) {
+    // Primero buscar el usuario por email en auth
+    const { data: authData, error: authError } = await supabase.auth.admin.getUserByEmail(email);
+    
+    if (authError || !authData?.user) {
+      return null;
+    }
+    
+    // Luego obtener el perfil
+    const { data, error } = await supabase
+      .from('perfiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+    
+    if (error) return null;
+    return data;
+  }
+
+  async actualizarPerfilGoogle(idPerfil, googleId, profileImage) {
+    const updateData = { googleId };
+    if (profileImage) {
+      updateData.avatar = profileImage;
+    }
+    
+    const { data, error } = await supabase
+      .from('perfiles')
+      .update(updateData)
+      .eq('idPerfil', idPerfil);
+    
+    if (error) throw new Error(error.message ?? error);
+    return data;
+  }
+
+  async insertarPerfilGoogle(userId, username, nombre, apellido, email, googleId, profileImage) {
+    const perfilData = {
+      id: userId,
+      username,
+      nombre,
+      apellido,
+      googleId,
+      email
+    };
+    
+    if (profileImage) {
+      perfilData.avatar = profileImage;
+    }
+    
+    const { data, error } = await supabase
+      .from('perfiles')
+      .insert([perfilData])
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message ?? error);
+    return data;
+  }
 }

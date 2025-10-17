@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@huggingface/inference": "^4.5.1",
+    "@react-native-google-signin/google-signin": "^16.0.0",
     "@supabase/supabase-js": "^2.49.8",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
@@ -21,10 +22,11 @@
     "dotenv": "^16.5.0",
     "expo": "^53.0.20",
     "express": "^5.1.0",
-    "socket.io": "^4.7.5",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "react-native-url-polyfill": "^3.0.0",
+    "socket.io": "^4.7.5"
   }
 }

@@ -102,4 +102,89 @@ export class UserService {
       res.status(500).json({ error: error.message || error });
     }
   }
+
+  async googleAuth(req, res) {
+    const { email, nombre, apellido, username, googleId, profileImage, supabaseId } = req.body;
+    
+    try {
+      // Verificar si el usuario ya existe por email o supabaseId
+      let perfil = await this.userRepository.obtenerPerfilPorEmail(email);
+      
+      if (!perfil && supabaseId) {
+        perfil = await this.userRepository.obtenerPerfilPorId(supabaseId);
+      }
+      
+      if (!perfil) {
+        // Usuario no existe, devolver 404 para que el frontend sepa que debe registrarlo
+        return res.status(404).json({ 
+          error: 'Usuario no encontrado. Debe registrarse primero.',
+          needsRegistration: true 
+        });
+      }
+      
+      // Usuario existe, actualizar información de Google si es necesario
+      if (googleId && !perfil.googleId) {
+        await this.userRepository.actualizarPerfilGoogle(perfil.idPerfil, googleId, profileImage);
+      }
+      
+      // Generar token JWT
+      const token = jwt.sign({ 
+        userId: perfil.idUsuario || supabaseId, 
+        id: perfil.idUsuario || supabaseId, 
+        email 
+      }, SECRET_KEY, { expiresIn: '30d' });
+      
+      res.json({
+        message: 'Login con Google exitoso',
+        user: { id: perfil.idUsuario || supabaseId, email },
+        perfil,
+        token
+      });
+    } catch (error) {
+      console.error('Error en googleAuth:', error);
+      res.status(500).json({ error: error.message || error });
+    }
+  }
+
+  async googleRegister(req, res) {
+    const { email, nombre, apellido, username, googleId, profileImage, supabaseId } = req.body;
+    
+    try {
+      // Verificar si el usuario ya existe
+      let perfil = await this.userRepository.obtenerPerfilPorEmail(email);
+      
+      if (perfil) {
+        // Si ya existe, hacer login en lugar de registro
+        return this.googleAuth(req, res);
+      }
+      
+      // Crear perfil para usuario de Google (sin crear usuario en auth ya que viene de Supabase)
+      perfil = await this.userRepository.insertarPerfilGoogle(
+        supabaseId, 
+        username, 
+        nombre, 
+        apellido, 
+        email,
+        googleId,
+        profileImage
+      );
+      
+      // Generar token JWT
+      const token = jwt.sign({ 
+        userId: supabaseId, 
+        id: supabaseId, 
+        email 
+      }, SECRET_KEY, { expiresIn: '30d' });
+      
+      res.json({
+        message: 'Registro con Google exitoso',
+        user: { id: supabaseId, email },
+        perfil,
+        token
+      });
+    } catch (error) {
+      console.error('Error en googleRegister:', error);
+      res.status(400).json({ error: error.message || error });
+    }
+  }
 }

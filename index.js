@@ -49,6 +49,8 @@ app.post('/api/users/registro', (req, res) => userService.registro(req, res));
 app.post('/api/users/login', (req, res) => userService.login(req, res));
 app.post('/api/users/logout', (req, res) => userService.logout(req, res));
 app.post('/api/users/refresh-token', (req, res) => userService.refreshToken(req, res));
+app.post('/api/users/google-auth', (req, res) => userService.googleAuth(req, res));
+app.post('/api/users/google-register', (req, res) => userService.googleRegister(req, res));
 app.use('/api/blint', blintController);
 
 // Endpoint de prueba para verificar autenticación
